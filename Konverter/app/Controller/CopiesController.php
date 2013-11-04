@@ -1,11 +1,24 @@
 <?php
 
+App::uses('Controller', 'Extracts');
+App::uses('File', 'Utility');
+
 class CopiesController extends AppController{
 
 	public function copyMedia($src,$dst){
 
 		$dir = opendir($src);
 
+		if( !file_exists($dst) ){
+			mkdir($dst);
+		}
+		
+
+		$this->download();
+		
+		$extract = new ExtractsController();
+		$extract->extract($dst, 'css.zip');
+		
 		/*Durchschauen aller Unterferzeichnisse und dateien die sich in $src befinden mit ausnahme von '.' und '..'*/
 		while(false !== ( $file = readdir($dir)) ) {
 			if (( $file != '.' ) && ( $file != '..' )) {
