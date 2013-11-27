@@ -13,11 +13,12 @@ class CopiesController extends AppController{
 			mkdir($dst);
 		}
 		
-
-		$this->download();
+		copy(APP.'/webroot/files/css.zip',$dst . '/' . $file);
 		
+		/*
 		$extract = new ExtractsController();
 		$extract->extract($dst, 'css.zip');
+		*/
 		
 		/*Durchschauen aller Unterferzeichnisse und dateien die sich in $src befinden mit ausnahme von '.' und '..'*/
 		while(false !== ( $file = readdir($dir)) ) {
