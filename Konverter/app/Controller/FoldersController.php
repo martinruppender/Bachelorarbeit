@@ -15,7 +15,6 @@ class FoldersController extends AppController{
 	public function copyMedia($stcf,$stct){
 
 		$dir = opendir($stcf);
-		$this->folderMkdir($stct);
 
 		/*Durchschauen aller Unterferzeichnisse und dateien die sich in $src befinden mit ausnahme von '.' und '..'*/
 		while(false !== ( $file = readdir($dir)) ) {

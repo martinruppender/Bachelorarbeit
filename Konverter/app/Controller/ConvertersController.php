@@ -3,60 +3,40 @@
 App::uses('File', 'Utility');
 App::import('Controller', 'Folders');
 App::import('Controller', 'Extracts');
+App::import('Controller', 'Writers');
 
 class ConvertersController extends AppController{
 
 	private $outputfolder;
 	private $folder;
-	//static private $tempFolder;
-	//static private $fileName;
 
 	public function convert($file){
 
 		/*Erstellen der Pfade für Zwischenspeicher und Ausgabeordner*/
-		$outputfolder = 'C:'.DS.'PPTX-Konverter';
-		$tempFolder = 'C:'. DS .'PPTX-TMP';
-		$fileName = substr($file['name'], 0,-5) .'.zip';
+		$fileName = substr($file['name'], 0,-5);
 
+		$outputfolder = 'C:'.DS.$fileName;
+		$tempFolder = 'C:'.DS.$fileName.DS.'TMP';
+		
+		
 		$folder = new FoldersController;
 
 		$folder->folderMkdir($outputfolder);
 		$folder->folderMkdir($tempFolder);
 			
 		/*Kopieren und entpacken der gleadenen Datei*/
-		if (move_uploaded_file($file['tmp_name'], $tempFolder.DS.$fileName)) {
+		if (move_uploaded_file($file['tmp_name'], $tempFolder.DS.$fileName.'.zip')) {
 
 			$extracts = new ExtractsController;
-			$extracts->extract($tempFolder,$fileName);
+			$extracts->extract($tempFolder,$fileName.'.zip');
+			$extracts->download($outputfolder);
 
 			$folder->copyMedia($tempFolder.DS.'ppt'.DS.'media', $outputfolder.DS.'media');
 
-
+			$writer = new WritersController();
+			$writer->writeDatas($outputfolder, $tempFolder.DS.'ppt'.DS.'slides', $fileName);
+			
 		}
 	}
 
 }
-
-/*
-
-$datei = new File($outputfolder.DS.'presentation.html', true, 0644);
-$datei->create();
-$slides = scandir($tempFolder.DS.'slides');
-
-$datei->write('
-		<div class="reveal">
-		<div class="slides">
-		<section>Single Horizontal Slide</section>');
-
-foreach ($slides as $slide){
-if($slide[0] != '_'){
-if(is_dir($slide) == false){
-$name = substr($slide, 0,-4);
-$datei->write('<section>Vertical '.$name.'</section>');
-}
-}
-}
-
-$datei->write('	</section>
-		</div>
-		</div>');*/
