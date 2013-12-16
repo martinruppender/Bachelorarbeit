@@ -46,8 +46,8 @@ class WritersController extends Appcontroller{
 		*/
 
 		$phototype = array("jpg","jpeg","jpe","png","iwf","svg", "svgz","gif" );
-		$videotype = array("mp4", "webm", "ogv", "m4v" );
-		$audiotype = array("mp3", "wav", "ogg");
+		//$videotype = array("mp4", "webm", "ogv", "m4v" );
+		//$audiotype = array("mp3", "wav", "ogg");
 		
 		foreach ($relsFile->children() as $child) {
 			foreach ($child->attributes() as $element => $target ){
