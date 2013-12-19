@@ -30,7 +30,8 @@ class WritersController extends Appcontroller{
 	private function converter($path,$slide){
 
 		$inputsildes = '<section>';
-
+		
+		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
 
 		$namespaces = $xml->getNamespaces(true);
@@ -39,47 +40,17 @@ class WritersController extends Appcontroller{
 			$xml->registerXPathNamespace($key, $value);
 		}
 
-		$child = $xml->children($namespaces['p']);
+		$inputsildes = $this->text($inputsildes, $xml, $namespaces);
+		
+		$inputsildes = $this->images($inputsildes, $xmlreal);
+		
+		$inputsildes = $inputsildes.'</section>';
 
-		$node = $xml->xpath('//a:p');
+		return $inputsildes;
+	}
 
-		$startTag='';
-		$endTag='';
+	private function images($inputsildes, $xmlreal){
 
-		foreach ($node as $subnode){
-
-			if($subnode->xpath('a:pPr') != null){
-				$openDIV = false;
-
-				$positionOfText =$subnode->xpath('a:pPr');
-				if((string)$positionOfText[0]['algn'] == 'r'){
-					$startTag = '<div align="right">';
-					$openDIV = true;
-				}
-				if((string)$positionOfText[0]['algn'] == 'ctr'){
-					$startTag = '<div align="center">';
-					$openDIV = true;
-				}
-				if($openDIV == true){
-					$endTag = '<br></div>';
-				}
-			}else{
-				$endTag = '<br>';
-			}
-
-			$textNodes =$subnode->xpath('a:r');
-			foreach ($textNodes as $textNode){
-				$text = $textNode->xpath('a:t');
-
-				$text = (string)$text[0];
-				$text = ereg_replace("<","&lt;", $text);
-				$text = ereg_replace(">","&gt;", $text);
-
-				$inputsildes = $inputsildes.$startTag.$text.$endTag;
-			}
-		}
-
-		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$phototype = array("jpg","jpeg","jpe","png","iwf","svg", "svgz","gif" );
 
 		//$videotype = array("mp4", "webm", "ogv", "m4v" );
@@ -96,8 +67,82 @@ class WritersController extends Appcontroller{
 			}
 		}
 
-		$inputsildes = $inputsildes.'</section>';
+		return $inputsildes;
+	}
 
+	private function text($inputsildes, $xml, $namespaces){
+		
+		$node = $xml->xpath('//a:p');
+		
+		$startTag='';
+		$endTag='';
+		$lineBreak='';
+
+		foreach ($node as $subnode){
+
+			$child = $subnode->children($namespaces['a']);
+			
+			$openDIV = false;
+			
+			foreach ($child as $key=>$node){
+				if($key='pPr'){
+					
+					if((string)$node[0]['algn'] == 'r'){
+						$startTag = '<div align="right">';
+						$openDIV = true;
+					}
+					
+					if((string)$node[0]['algn'] == 'ctr'){
+						$startTag = '<div align="center">';
+						$openDIV = true;
+					}
+					if($openDIV == true){
+						$endTag = '</div>';
+					}
+				}
+				
+				if($key= 'br'){
+					$lineBreak='<br>';
+				}
+				
+				debug($key);
+				debug($node);
+			}
+			
+
+			
+			/*
+			if($subnode->xpath('a:pPr') != null){
+				$openDIV = false;
+
+				$positionOfText =$subnode->xpath('a:pPr');
+				if((string)$positionOfText[0]['algn'] == 'r'){
+					$startTag = '<div align="right">';
+					$openDIV = true;
+				}
+				if((string)$positionOfText[0]['algn'] == 'ctr'){
+					$startTag = '<div align="center">';
+					$openDIV = true;
+				}
+				if($openDIV == true){
+					$endTag = '</div>';
+				}
+			}else{
+				$endTag = '<br>';
+			}
+			*/
+
+			$textNodes =$subnode->xpath('a:r');
+			foreach ($textNodes as $textNode){
+				$text = $textNode->xpath('a:t');
+
+				$text = (string)$text[0];
+				$text = ereg_replace("<","&lt;", $text);
+				$text = ereg_replace(">","&gt;", $text);
+
+				$inputsildes = $inputsildes.$startTag.$text.$endTag.$lineBreak;
+			}
+		}
 		return $inputsildes;
 	}
 }
