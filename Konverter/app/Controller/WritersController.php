@@ -31,25 +31,61 @@ class WritersController extends Appcontroller{
 
 		$inputsildes = '<section>';
 
-		$xmlFile  = $path.DS.$slide;
-		$relsXMLFile = $path.DS.'_rels'.DS.$slide.'.rels';
+		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
 
-		$relsFile = simplexml_load_file($relsXMLFile);
+		$namespaces = $xml->getNamespaces(true);
 
-		/*
-		$file = file_get_contents($xmlFile, "r+");
-		$file = ereg_replace(":","_", $file);
-		file_put_contents($xmlFile, $file);
+		foreach ($namespaces as $key=>$value){
+			$xml->registerXPathNamespace($key, $value);
+		}
 
-		$file = simplexml_load_file($xmlFile);
+		$child = $xml->children($namespaces['p']);
 
-		*/
+		$node = $xml->xpath('//a:p');
 
+		$startTag='';
+		$endTag='';
+
+		foreach ($node as $subnode){
+
+			if($subnode->xpath('a:pPr') != null){
+				$openDIV = false;
+
+				$positionOfText =$subnode->xpath('a:pPr');
+				if((string)$positionOfText[0]['algn'] == 'r'){
+					$startTag = '<div align="right">';
+					$openDIV = true;
+				}
+				if((string)$positionOfText[0]['algn'] == 'ctr'){
+					$startTag = '<div align="center">';
+					$openDIV = true;
+				}
+				if($openDIV == true){
+					$endTag = '<br></div>';
+				}
+			}else{
+				$endTag = '<br>';
+			}
+
+			$textNodes =$subnode->xpath('a:r');
+			foreach ($textNodes as $textNode){
+				$text = $textNode->xpath('a:t');
+
+				$text = (string)$text[0];
+				$text = ereg_replace("<","&lt;", $text);
+				$text = ereg_replace(">","&gt;", $text);
+
+				$inputsildes = $inputsildes.$startTag.$text.$endTag;
+			}
+		}
+
+		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$phototype = array("jpg","jpeg","jpe","png","iwf","svg", "svgz","gif" );
+
 		//$videotype = array("mp4", "webm", "ogv", "m4v" );
 		//$audiotype = array("mp3", "wav", "ogg");
-		
-		foreach ($relsFile->children() as $child) {
+
+		foreach ($xmlreal->children() as $child) {
 			foreach ($child->attributes() as $element => $target ){
 				if($element == "Target"){
 					if(in_array(substr((string)$target,-4),$phototype) || in_array(substr((string)$target,-3),$phototype)){
