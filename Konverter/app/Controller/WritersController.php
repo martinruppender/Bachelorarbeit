@@ -30,7 +30,7 @@ class WritersController extends Appcontroller{
 	private function converter($path,$slide){
 
 		$inputsildes = '<section>';
-		
+
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
 
@@ -41,9 +41,9 @@ class WritersController extends Appcontroller{
 		}
 
 		$inputsildes = $this->text($inputsildes, $xml, $namespaces);
-		
+
 		$inputsildes = $this->images($inputsildes, $xmlreal);
-		
+
 		$inputsildes = $inputsildes.'</section>';
 
 		return $inputsildes;
@@ -71,78 +71,94 @@ class WritersController extends Appcontroller{
 	}
 
 	private function text($inputsildes, $xml, $namespaces){
-		
+
 		$node = $xml->xpath('//a:p');
-		
-		$startTag='';
-		$endTag='';
-		$lineBreak='';
+
+		$openDIV = false;
 
 		foreach ($node as $subnode){
 
 			$child = $subnode->children($namespaces['a']);
-			
-			$openDIV = false;
-			
+
 			foreach ($child as $key=>$node){
-				if($key='pPr'){
-					
-					if((string)$node[0]['algn'] == 'r'){
-						$startTag = '<div align="right">';
+
+				if($key=='pPr'){
+
+					if((string)$node->attributes() == 'r'){
+						$inputsildes = $inputsildes.'<div align="right">';
 						$openDIV = true;
 					}
-					
-					if((string)$node[0]['algn'] == 'ctr'){
-						$startTag = '<div align="center">';
+
+					if((string)$node->attributes() == 'ctr'){
+						$inputsildes = $inputsildes.'<div align="center">';
 						$openDIV = true;
 					}
-					if($openDIV == true){
-						$endTag = '</div>';
+				}
+
+				if($key=='r'){
+					
+					$ba ='';
+					$ia ='';
+					$ua ='';
+					$be ='';
+					$ie ='';
+					$ue ='';
+
+					foreach ($node->children($namespaces['a'])as $key1=>$node1){
+						
+						$s = null;
+						
+						foreach ($node1->attributes() as $k=>$v){
+							if(strlen((string)$k) == 1){
+								$s = $k;
+								
+								if($key1 =='rPr'){
+									if($s == 'b'){
+										$ba = '<b>';
+										$be = '</b>';
+									}
+										
+										
+									if($s == 'i'){
+										$ia = '<i>';
+										$ie = '</i>';
+									}
+									if($s == 'u'){
+										$ua = '<u>';
+										$ue = '</u>';
+									}
+								}
+							}
+						}
+						
+						if($key1 =='t'){
+							$text = (string)$node1;
+							$text = $this->sonderzeichen($text);
+							$text = $ba.$ia.$ua.$text.$ue.$ie.$be;
+						}
 					}
+					
+					$inputsildes = $inputsildes.$text;
 				}
-				
-				if($key= 'br'){
-					$lineBreak='<br>';
+
+				if($key== 'br'){
+					$inputsildes = $inputsildes.'<br>';
 				}
-				
-				debug($key);
-				debug($node);
+
 			}
-			
-
-			
-			/*
-			if($subnode->xpath('a:pPr') != null){
-				$openDIV = false;
-
-				$positionOfText =$subnode->xpath('a:pPr');
-				if((string)$positionOfText[0]['algn'] == 'r'){
-					$startTag = '<div align="right">';
-					$openDIV = true;
-				}
-				if((string)$positionOfText[0]['algn'] == 'ctr'){
-					$startTag = '<div align="center">';
-					$openDIV = true;
-				}
-				if($openDIV == true){
-					$endTag = '</div>';
-				}
-			}else{
-				$endTag = '<br>';
+			if($openDIV == true){
+				$inputsildes = $inputsildes.'</div>';
+				$openDIV=false;
 			}
-			*/
-
-			$textNodes =$subnode->xpath('a:r');
-			foreach ($textNodes as $textNode){
-				$text = $textNode->xpath('a:t');
-
-				$text = (string)$text[0];
-				$text = ereg_replace("<","&lt;", $text);
-				$text = ereg_replace(">","&gt;", $text);
-
-				$inputsildes = $inputsildes.$startTag.$text.$endTag.$lineBreak;
-			}
+			$inputsildes = $inputsildes.'<br>';
 		}
 		return $inputsildes;
+	}
+
+	private function sonderzeichen($text){
+
+		$text = ereg_replace("<","&lt;", $text);
+		$text = ereg_replace(">","&gt;", $text);
+		return $text;
 	}
 }
