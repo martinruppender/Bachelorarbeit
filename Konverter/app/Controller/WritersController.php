@@ -93,51 +93,81 @@ class WritersController extends Appcontroller{
 						$inputsildes = $inputsildes.'<div align="center">';
 						$openDIV = true;
 					}
+
 				}
 
 				if($key=='r'){
-					
-					$ba ='';
-					$ia ='';
-					$ua ='';
-					$be ='';
-					$ie ='';
-					$ue ='';
+
+					$startTags ='';
+					$endTags ='';
 
 					foreach ($node->children($namespaces['a'])as $key1=>$node1){
-						
-						$s = null;
-						
-						foreach ($node1->attributes() as $k=>$v){
-							if(strlen((string)$k) == 1){
-								$s = $k;
-								
-								if($key1 =='rPr'){
-									if($s == 'b'){
-										$ba = '<b>';
-										$be = '</b>';
-									}
-										
-										
-									if($s == 'i'){
-										$ia = '<i>';
-										$ie = '</i>';
-									}
-									if($s == 'u'){
-										$ua = '<u>';
-										$ue = '</u>';
-									}
+							
+						if($key1 =='rPr'){
+
+							if($node1->children($namespaces['a'])){
+								$font = $node1->children($namespaces['a']);
+
+								$startTags = '<font';
+
+								if(array_key_exists('latin', $font)){
+									$latin = $font->latin[0]->attributes();
+									$startTags = $startTags.' face="'.$latin.', Arial"';
 								}
+
+								if(array_key_exists('solidFill', $font)){
+										
+									if(array_key_exists('srgbClr',$font->solidFill->children($namespaces['a']))){
+										$colour = $font->solidFill->srgbClr[0]->attributes();
+										$startTags = $startTags.' color="#'.(string)$colour['val'].'">';
+									}
+									if(array_key_exists('schemeClr',$font->solidFill->children($namespaces['a']))){
+										$colour = $font->solidFill->schemeClr[0]->children($namespaces['a']);
+										#$colour = $colour[0]->attributes();
+										$startTags = $startTags.' color="#000000">';
+										#debug(((string)$colour['val']));
+									}
+									
+										
+								}else{
+									$startTags = $startTags.'>';
+								}
+
+								$endTags = '</font>';
+							}
+
+							foreach ($node1->attributes() as $k=>$v){
+
+									if($key1 =='rPr'){
+										if($k == 'b'){
+											$startTags = $startTags.'<b>';
+											$endTags = '</b>'.$endTags;
+										}
+
+										if($k == 'i'){
+											$startTags = $startTags.'<i>';
+											$endTags = '</i>'.$endTags;
+										}
+										if($k == 'u'){
+											$startTags = $startTags.'<u>';
+											$endTags = '</u>'.$endTags;
+										}
+										if($k == 'strike'){
+											if($v == 'sngStrike'){
+												$startTags = $startTags.'<s>';
+												$endTags = '</s>'.$endTags;
+											}
+										}
+									}
 							}
 						}
-						
 						if($key1 =='t'){
 							$text = (string)$node1;
 							$text = $this->sonderzeichen($text);
-							$text = $ba.$ia.$ua.$text.$ue.$ie.$be;
+							$text = $startTags.$text.$endTags;
 						}
 					}
-					
+
 					$inputsildes = $inputsildes.$text;
 				}
 
