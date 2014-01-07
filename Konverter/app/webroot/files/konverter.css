@@ -1,0 +1,22 @@
+@charset "UTF-8";
+
+/*!
+ * Konverter
+ * 
+ */
+
+
+/*********************************************
+ * KONVERTER STYLES
+ *********************************************/
+
+body{
+	background-color:black;
+}
+
+section{
+	font-size:18pt;
+	font-family: Calibri;
+	background-color:white;
+	width: 25.4cm; height: 19.05cm;
+}

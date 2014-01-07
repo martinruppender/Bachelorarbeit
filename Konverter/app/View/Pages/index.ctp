@@ -6,3 +6,4 @@
 	/*Beendet das Eingabeformular und erstellt einen Button zum beginn des Pcozesses im Controller*/
 	echo $this->Form->end('Datei Upload');
 ?>
+Die Ausgabe erfolgt im Verzeichnis C:
