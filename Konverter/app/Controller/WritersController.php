@@ -9,26 +9,33 @@ class WritersController extends Appcontroller{
 		$slides = scandir($tempFolder);
 		natsort($slides);
 
-		$file = file_get_contents($outputfolder.DS.'index.html', "r+");
-		$file = ereg_replace("inputtitel",$fileName, $file);
+		$fileHTML = file_get_contents($outputfolder.DS.'index.html', "r+");
+		$fileCSS = file_get_contents($outputfolder.DS.'css'.DS.'konverter.css', "r+");
+		$fileHTML = ereg_replace("inputtitel",$fileName, $fileHTML);
 
 		$inputsildes = '';
+		$css = '';
 
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
-					$inputsildes = $inputsildes.$this->converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide);
+					$output = $this->converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide);
+					$inputsildes = $inputsildes.$output[0];
+					$css = $css.$output[1];
 				}
 			}
 		}
 
-		$file = ereg_replace("inputsildes",$inputsildes, $file);
-		file_put_contents($outputfolder.DS.'index.html', $file);
+		$fileHTML = ereg_replace("inputsildes",$inputsildes, $fileHTML);
+		$fileCSS = ereg_replace("css",$css, $fileCSS);
+		file_put_contents($outputfolder.DS.'index.html', $fileHTML);
+		file_put_contents($outputfolder.DS.'css'.DS.'konverter.css', $fileCSS);
 	}
 
 	private function converter($path,$slide){
 
 		$inputsildes = '<section>';
+		$css = '';
 
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
@@ -43,13 +50,25 @@ class WritersController extends Appcontroller{
 
 		foreach ($node as $subnode){
 			$child = $subnode->children($namespaces['p']);
+			$spNr = 0;
+			$picNr = 0;
+				
 			foreach ($child as $key=>$node){
+
 				if($key == 'sp'){
-					
-					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
-					#debug($size);
-					$inputsildes = $inputsildes.'<div style="position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm">';
+						
+					if(isset($node->spPr->xfrm)){
+						$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
+						$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+
+					}else{
+						$size = array(0,0);
+						$pos = array(0,0);
+					}
+						
+					$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+						
+					$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'sp'.$spNr++.'">';
 
 					foreach ($node as $subKey => $subNode){
 
@@ -67,19 +86,31 @@ class WritersController extends Appcontroller{
 					$inputsildes = $inputsildes.'</div>';
 				}
 
-			}
-			if($key == 'pic'){
-				$inputsildes = $inputsildes.'<div>';
-					
-				$inputsildes = $this->images($inputsildes, $xmlreal, $node);
+				if($key == 'pic'){
 
-				$inputsildes = $inputsildes.'</div>';
+					if(isset($node->spPr)){
+						$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
+						$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+					}else{
+						$size = array(0,0);
+						$pos = array(0,0);
+					}
+						
+					$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+						
+					$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'pic'.$picNr++.'">';
+					$inputsildes = $this->images($inputsildes, $xmlreal, $node);
+						
+					$inputsildes = $inputsildes.'</div>';
+				}
 			}
 		}
 
 		$inputsildes = $inputsildes.'</section>';
 
-		return $inputsildes;
+		$output = array($inputsildes, $css);
+
+		return $output;
 	}
 
 	private function images($inputsildes, $xmlreal, $node){
@@ -101,7 +132,7 @@ class WritersController extends Appcontroller{
 
 			$children = $child->attributes();
 			if($children->Id == $id){
-				$target = $child->Target;
+				$target = $children->Target;
 				if(in_array(substr((string)$target,-4),$phototype) || in_array(substr((string)$target,-3),$phototype)){
 					$media = substr((string)$target,3);
 					$inputsildes = $inputsildes.'<img src="'.$media.'" alt="Bild">';
