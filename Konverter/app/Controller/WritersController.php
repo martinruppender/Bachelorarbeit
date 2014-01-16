@@ -34,9 +34,7 @@ class WritersController extends Appcontroller{
 
 	private function converter($path,$slide){
 
-		$inputsildes = '<section>';
 		$css = '';
-
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
 
@@ -46,87 +44,99 @@ class WritersController extends Appcontroller{
 			$xml->registerXPathNamespace($key, $value);
 		}
 
+		$node = $xml->xpath('//p:cSld');
+		$child = $node[0]->children($namespaces['p']);
+		if(isset($child->bg)){
+			$child = $child->bg->bgPr;
+			$child = $child->children($namespaces['a']);
+			$backgroundslide = (string) $child->solidFill->srgbClr->attributes();
+
+		}else{
+			$backgroundslide = 'FFFFFF';
+		}
+		$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
+
+		$inputsildes = '<section><div class="'.substr($slide,0,-4).'">';
+
 		$node = $xml->xpath('//p:spTree');
 
-		foreach ($node as $subnode){
-			$child = $subnode->children($namespaces['p']);
-			$spNr = 0;
-			$picNr = 0;
+		$subnode = $node[0]->children($namespaces['p']);
+
+		$spNr = 0;
+		$picNr = 0;
+
+		foreach ($subnode as $key=>$node){
+
+			if($key == 'sp'){
+
+				if(isset($node->spPr->xfrm)){
+					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
+					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+
+				}else{
+					$size = array(0,0);
+					$pos = array(0,0);
+				}
+
+				$background ='';
+
+				if(!isset($node->spPr->noFill)){
+
+					$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
+				}
+
+				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
+
+				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'sp'.$spNr++.'">';
+
+				foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
+					if($key1 == 'p'){
+						$inputsildes = $inputsildes.$this->text($node1, $namespaces);
+					}
+				}
+
+				$inputsildes = $inputsildes.'</div>';
+			}
+
+			if($key == 'pic'){
+
+				if(isset($node->spPr)){
+					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
+					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+				}else{
+					$size = array(0,0);
+					$pos = array(0,0);
+				}
+
+				$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+
+				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'pic'.$picNr++.'">';
 				
-			foreach ($child as $key=>$node){
+				if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
 
-				if($key == 'sp'){
-						
-					if(isset($node->spPr->xfrm)){
-						$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-						$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
-
-					}else{
-						$size = array(0,0);
-						$pos = array(0,0);
-					}
-						
-					$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-						
-					$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'sp'.$spNr++.'">';
-
-					foreach ($node as $subKey => $subNode){
-
-						if($subKey == 'txBody'){
-
-							$child = $subNode->children($namespaces['a']);
-
-							foreach ($child as $key1=>$node1){
-								if($key1 == 'p'){
-									$inputsildes = $this->text($inputsildes, $node1, $namespaces);
-								}
-							}
-						}
-					}
-					$inputsildes = $inputsildes.'</div>';
+					$inputsildes = $inputsildes.$this->images($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
+					$inputsildes = $inputsildes.$this->audio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
+					
+				}else{
+					$inputsildes = $inputsildes.$this->images($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
 				}
-
-				if($key == 'pic'){
-
-					if(isset($node->spPr)){
-						$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-						$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
-					}else{
-						$size = array(0,0);
-						$pos = array(0,0);
-					}
-						
-					$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-						
-					$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'pic'.$picNr++.'">';
-					$inputsildes = $this->images($inputsildes, $xmlreal, $node);
-						
-					$inputsildes = $inputsildes.'</div>';
-				}
+				
+				$inputsildes = $inputsildes.'</div>';
 			}
 		}
 
-		$inputsildes = $inputsildes.'</section>';
+		$inputsildes = $inputsildes.'</div></section>';
 
 		$output = array($inputsildes, $css);
 
 		return $output;
 	}
 
-	private function images($inputsildes, $xmlreal, $node){
-
-		$node = $node->blipFill;
-		$namespaces = $node->getNamespaces(true);
-			
-		$node = $node->children($namespaces['a']);
-		$node = $node->blip;
-
+	private function images($xmlreal, $node){
+		
 		$id = (string) $node[0]->attributes('r', true);
 
 		$phototype = array("jpg","jpeg","jpe","png","iwf","svg", "svgz","gif" );
-
-		//$videotype = array("mp4", "webm", "ogv", "m4v" );
-		//$audiotype = array("mp3", "wav", "ogg");
 
 		foreach ($xmlreal->children() as $child) {
 
@@ -135,29 +145,48 @@ class WritersController extends Appcontroller{
 				$target = $children->Target;
 				if(in_array(substr((string)$target,-4),$phototype) || in_array(substr((string)$target,-3),$phototype)){
 					$media = substr((string)$target,3);
-					$inputsildes = $inputsildes.'<img src="'.$media.'" alt="Bild">';
+					return '<img src="'.$media.'" alt="Bild">';
 				}
 			}
 		}
-
-		return $inputsildes;
 	}
 
-	private function text($inputsildes, $node, $namespaces){
+	
+	private function audio($xmlreal, $node){
+	
+		$id = (string) $node[0]->attributes('r', true);
+		
+		$videotype = array("mp3","ogg", "wav");
+		
+		foreach ($xmlreal->children() as $child) {
+				
+			$children = $child->attributes();
+			if($children->Id == $id){
+				$target = $children->Target;
+				if(in_array(substr((string)$target,-3),$videotype)){
+					$media = substr((string)$target,3);
+					return '<audio controls><source src="'.$media.'" type="audio/mpeg">Your browser does not support the audio element.</audio>';
+				}
+			}
+		}
+	}
+	
+	private function text($node, $namespaces){
 
 		$openDIV = false;
-
+		$text ='';
+		
 		foreach ($node as $key=>$node){
 
 			if($key=='pPr'){
 
 				if((string)$node->attributes() == 'r'){
-					$inputsildes = $inputsildes.'<div align="right">';
+					$text = '<div align="right">';
 					$openDIV = true;
 				}
 
 				if((string)$node->attributes() == 'ctr'){
-					$inputsildes = $inputsildes.'<div align="center">';
+					$text= '<div align="center">';
 					$openDIV = true;
 				}
 			}
@@ -231,29 +260,28 @@ class WritersController extends Appcontroller{
 						}
 					}
 					if($key1 =='t'){
-						$text = (string)$node1;
-						$text = $this->sonderzeichen($text);
-						$text = $startTags.$text.$endTags;
+						$line = (string)$node1;
+						$line = $this->sonderzeichen($line);
+						$text = $text.$startTags.$line.$endTags;
 					}
 				}
 
-				$inputsildes = $inputsildes.$text;
 			}
 
 			if($key== 'br'){
-				$inputsildes = $inputsildes.'<br>';
+				$text = $text.'<br>';
 			}
 
 		}
 		if($openDIV == true){
-			$inputsildes = $inputsildes.'</div>';
+			$text = $text.'</div>';
 			$openDIV=false;
 		}
-		$inputsildes = $inputsildes.'<br>';
+		$text = $text.'<br>';
 
-		return $inputsildes;
+		return $text;
 	}
-
+	
 	private function sonderzeichen($text){
 
 		$text = ereg_replace("<","&lt;", $text);
