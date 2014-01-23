@@ -1,3 +1,5 @@
+//fracment
+
 <?php
 
 App::uses('File', 'Utility');
@@ -9,7 +11,7 @@ class ConvertersController extends AppController{
 
 	private $outputfolder;
 	private $folder;
-
+	
 	public function convert($file){
 
 		/*Erstellen der Pfade für Zwischenspeicher und Ausgabeordner*/
@@ -17,7 +19,6 @@ class ConvertersController extends AppController{
 
 		$outputfolder = 'C:'.DS.$fileName;
 		$tempFolder = 'C:'.DS.$fileName.DS.'TMP';
-		
 		
 		$folder = new FoldersController;
 
@@ -35,8 +36,6 @@ class ConvertersController extends AppController{
 
 			$writer = new WritersController();
 			$writer->writeDatas($outputfolder, $tempFolder.DS.'ppt'.DS.'slides', $fileName);
-			
 		}
 	}
-
 }

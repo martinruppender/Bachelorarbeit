@@ -1,6 +1,7 @@
 <?php
 
 App::uses('File', 'Utility');
+App::import('Controller', 'Messages');
 
 class WritersController extends Appcontroller{
 
@@ -111,18 +112,38 @@ class WritersController extends Appcontroller{
 				$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 
 				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'pic'.$picNr++.'">';
-				
+
 				if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
 
 					$inputsildes = $inputsildes.$this->images($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
 					$inputsildes = $inputsildes.$this->audio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
-					
+
 				}else{
 					$inputsildes = $inputsildes.$this->images($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
 				}
-				
+
 				$inputsildes = $inputsildes.'</div>';
 			}
+				
+			if($key == 'graphicFrame'){
+					
+				if(isset($node->spPr)){
+					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
+					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+				}else{
+					$size = array(0,0);
+					$pos = array(0,0);
+				}
+					
+				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+					
+				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'gFrame'.$picNr++.'">';
+				
+				$inputsildes = $inputsildes.$this->diagram($xmlreal, $node->children($namespaces['a'])->grafic);
+					
+				$inputsildes = $inputsildes.'</div>';
+			}
+				
 		}
 
 		$inputsildes = $inputsildes.'</div></section>';
@@ -133,7 +154,7 @@ class WritersController extends Appcontroller{
 	}
 
 	private function images($xmlreal, $node){
-		
+
 		$id = (string) $node[0]->attributes('r', true);
 
 		$phototype = array("jpg","jpeg","jpe","png","iwf","svg", "svgz","gif" );
@@ -151,31 +172,39 @@ class WritersController extends Appcontroller{
 		}
 	}
 
-	
 	private function audio($xmlreal, $node){
-	
+
 		$id = (string) $node[0]->attributes('r', true);
-		
+
 		$videotype = array("mp3","ogg", "wav");
-		
+
 		foreach ($xmlreal->children() as $child) {
-				
+
 			$children = $child->attributes();
 			if($children->Id == $id){
 				$target = $children->Target;
 				if(in_array(substr((string)$target,-3),$videotype)){
 					$media = substr((string)$target,3);
 					return '<audio controls><source src="'.$media.'" type="audio/mpeg">Your browser does not support the audio element.</audio>';
+				}else{
+					$media = substr((string)$target,3);
+					MessagesController::setAudio($media);
+						
+					return '<audio controls><source src="'.substr($media,-3).'mp3" type="audio/mpeg">Your browser does not support the audio element.</audio>';
 				}
 			}
 		}
 	}
-	
+
+	private function diagram($xmlreal, $node){
+		return 'Klappt';
+	}
+
 	private function text($node, $namespaces){
 
 		$openDIV = false;
 		$text ='';
-		
+
 		foreach ($node as $key=>$node){
 
 			if($key=='pPr'){
@@ -281,7 +310,7 @@ class WritersController extends Appcontroller{
 
 		return $text;
 	}
-	
+
 	private function sonderzeichen($text){
 
 		$text = ereg_replace("<","&lt;", $text);

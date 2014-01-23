@@ -4,10 +4,11 @@
  */
 
 App::import('Controller', 'Converters');
+App::import('Controller', 'Messages');
 
 class PagesController extends AppController {
 
-	public function index() {
+	public function start() {
 
 		/*Abfangen der vom Button ausgelösten Action auf der Indexseite*/
 		if ($this->request->is('post')) {
@@ -22,6 +23,9 @@ class PagesController extends AppController {
 
 			$converter = New ConvertersController();
 			$converter->convert($uploadData);
+			$mc = new MessagesController;
+			$ausgabe = $mc->message();
+			$this->Session->setFlash($ausgabe);
 		}
 	}
 }
