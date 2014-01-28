@@ -124,12 +124,12 @@ class WritersController extends Appcontroller{
 
 				$inputsildes = $inputsildes.'</div>';
 			}
-				
+
 			if($key == 'graphicFrame'){
-					
-				if(isset($node->spPr)){
-					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
+
+				if(isset($node->xfrm)){
+					$size = $node->xfrm->children($namespaces['a'])->ext->attributes();
+					$pos = $node->xfrm->children($namespaces['a'])->off->attributes();
 				}else{
 					$size = array(0,0);
 					$pos = array(0,0);
@@ -138,12 +138,12 @@ class WritersController extends Appcontroller{
 				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 					
 				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'gFrame'.$picNr++.'">';
-				
-				$inputsildes = $inputsildes.$this->diagram($xmlreal, $node->children($namespaces['a'])->grafic);
+
+				$inputsildes = $inputsildes.$this->diagram($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']));
 					
 				$inputsildes = $inputsildes.'</div>';
 			}
-				
+
 		}
 
 		$inputsildes = $inputsildes.'</div></section>';
@@ -189,15 +189,45 @@ class WritersController extends Appcontroller{
 				}else{
 					$media = substr((string)$target,3);
 					MessagesController::setAudio($media);
-						
+
 					return '<audio controls><source src="'.substr($media,-3).'mp3" type="audio/mpeg">Your browser does not support the audio element.</audio>';
 				}
 			}
 		}
 	}
 
-	private function diagram($xmlreal, $node){
-		return 'Klappt';
+	private function diagram($xmlreal, $path, $node){
+		$id =  (string)$node->attributes('r', true);
+
+		foreach ($xmlreal->children() as $child) {
+
+			$label = null;
+
+			$children = $child->attributes();
+			if($children->Id == $id){
+				
+				$target = $children->Target;
+				$chart =  new SimpleXMLElement(file_get_contents(substr($path,0,-7).substr($target,2)));
+				$namespace = $chart->getNamespaces(true);
+				$chart = $chart->children($namespace['c'])->chart->plotArea;
+				
+				$labels = $chart->barChart->ser->cat->strRef->strCache;
+				
+				foreach ($labels->children() as $key=>$lab ){
+					debug($key);
+					if($key == 'pt'){
+						
+						if($label == null){
+							$label = array($lab->v);
+						} else{
+							array_push($lable,$lab->v);
+						}
+					}
+				}
+				debug($label);
+			}
+		}
+		return 'blubb';
 	}
 
 	private function text($node, $namespaces){
@@ -294,13 +324,11 @@ class WritersController extends Appcontroller{
 						$text = $text.$startTags.$line.$endTags;
 					}
 				}
-
 			}
 
 			if($key== 'br'){
 				$text = $text.'<br>';
 			}
-
 		}
 		if($openDIV == true){
 			$text = $text.'</div>';

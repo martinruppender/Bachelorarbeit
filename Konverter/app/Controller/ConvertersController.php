@@ -9,9 +9,6 @@ App::import('Controller', 'Writers');
 
 class ConvertersController extends AppController{
 
-	private $outputfolder;
-	private $folder;
-	
 	public function convert($file){
 
 		/*Erstellen der Pfade für Zwischenspeicher und Ausgabeordner*/
