@@ -199,35 +199,67 @@ class WritersController extends Appcontroller{
 	private function diagram($xmlreal, $path, $node){
 		$id =  (string)$node->attributes('r', true);
 
+		$label = null;
 		foreach ($xmlreal->children() as $child) {
-
-			$label = null;
-
+				
 			$children = $child->attributes();
 			if($children->Id == $id){
-				
+
 				$target = $children->Target;
 				$chart =  new SimpleXMLElement(file_get_contents(substr($path,0,-7).substr($target,2)));
 				$namespace = $chart->getNamespaces(true);
 				$chart = $chart->children($namespace['c'])->chart->plotArea;
-				
+
 				$labels = $chart->barChart->ser->cat->strRef->strCache;
-				
-				foreach ($labels->children() as $key=>$lab ){
-					debug($key);
-					if($key == 'pt'){
+
+				foreach ($labels->children($namespace['c']) as $key=>$lab){
 						
+					if($key == 'pt'){
+
 						if($label == null){
-							$label = array($lab->v);
+							$label = array((string)$lab->v);
 						} else{
-							array_push($lable,$lab->v);
+							array_push($label,(string)$lab->v);
 						}
 					}
 				}
-				debug($label);
 			}
 		}
-		return 'blubb';
+		
+		$chartlabels = null;
+		foreach ($label as $lab){
+			if($chartlabels == null){
+				$chartlabels = '"'.$lab.'"';
+			}else{
+				$chartlabels = $chartlabels.',"'.$lab.'"';
+			}
+			
+		}
+		
+		$name = substr($target,10,-4);
+		return '<canvas id="'.substr($target,10,-4).'" width="400" height="400"></canvas>
+				<script>
+					var barChartData = {
+						labels : ['.$chartlabels.'],
+						datasets : [{
+							fillColor : "rgba(220,220,220,0.5)",
+							strokeColor : "rgba(220,220,220,1)",
+							data : [4.3,2.5,3.5,4.5]
+							},
+							{
+							fillColor : "rgba(151,187,205,0.5)",
+							strokeColor : "rgba(151,187,205,1)",
+							data : [2.4,4.4,1.8,2.8]
+							},
+							{
+							fillColor : "rgba(151,187,205,0.5)",
+							strokeColor : "rgba(151,187,215,1)",
+							data : [2,2,3,5]
+							}
+						]
+					}
+				var myLine = new Chart(document.getElementById("'.$name.'").getContext("2d")).Bar(barChartData);
+				</script>';
 	}
 
 	private function text($node, $namespaces){
