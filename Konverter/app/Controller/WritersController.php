@@ -252,7 +252,7 @@ class WritersController extends Appcontroller{
 							data : [2.4,4.4,1.8,2.8]
 							},
 							{
-							fillColor : "rgba(151,187,205,0.5)",
+							fillColor : "rgba(141,187,225,0.5)",
 							strokeColor : "rgba(151,187,215,1)",
 							data : [2,2,3,5]
 							}
