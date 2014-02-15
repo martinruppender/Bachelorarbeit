@@ -21,8 +21,7 @@ class PagesController extends AppController {
 				return false;
 			}
 
-			$converter = New ConvertersController();
-			$converter->convert($uploadData);
+			ConvertersController::convert($uploadData);
 			$mc = new MessagesController;
 			$ausgabe = $mc->message();
 			$this->Session->setFlash($ausgabe);

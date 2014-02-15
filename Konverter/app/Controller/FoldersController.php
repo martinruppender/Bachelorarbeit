@@ -4,7 +4,7 @@ App::uses('File', 'Utility');
 
 class FoldersController extends AppController{
 
-	public function folderMkdir($stct){
+	public static function folderMkdir($stct){
 
 		/*Prüft ob das Verzeichniss bereits existiert. Existiert es nicht wird es neu erstellt*/
 		if(!file_exists($stct)){
@@ -12,7 +12,7 @@ class FoldersController extends AppController{
 		}
 	}
 
-	public function copyMedia($stcf,$stct){
+	public static function copyMedia($stcf,$stct){
 
 		$dir = opendir($stcf);
 
@@ -33,7 +33,7 @@ class FoldersController extends AppController{
 		closedir($dir);
 	}
 
-	public function folderRemove($stct){
+	public static function folderRemove($stct){
 
 		if (! is_dir($stct)) {
 			throw new InvalidArgumentException("$stct must be a directory");
