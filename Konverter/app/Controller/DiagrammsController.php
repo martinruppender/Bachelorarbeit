@@ -27,7 +27,7 @@ class DiagrammsController extends AppController{
 		}
 
 		$name = substr($target,10,-4);
-		return '<p class="fragment"><canvas id="'.$name.'" width="'.round($size[0]/9525).'" height="'.round($size[1]/9525).'"></canvas></p>
+		return '<canvas id="'.$name.'" width="'.round($size[0]/9525).'" height="'.round($size[1]/9525).'"></canvas>
 		<script>
 		'.$diagrammdatas[1].'
 		var ctx = document.getElementById("'.$name.'").getContext("2d");
@@ -37,8 +37,8 @@ class DiagrammsController extends AppController{
 
 	private static function barChart($labels){
 
-		$label = null;
-		$datas = null;
+		$label = array();
+		$datas = array();
 
 		$namespace = $labels->getNamespaces(true);
 		$flag = false;
@@ -53,32 +53,20 @@ class DiagrammsController extends AppController{
 							
 						if($key1 == 'pt'){
 
-							if($label == null){
-								$label = array((string)$lab1->v);
-							} else{
-								array_push($label,(string)$lab1->v);
-							}
+							array_push($label,(string)$lab1->v);
 						}
 					}
 					$flag = true;
 				}
-				$data = null;
+				$data = array();
 				foreach ($lab->val->numRef->numCache->children($namespace['c']) as $key1=>$lab1){
 
 					if($key1 == 'pt'){
 
-						if($data == null){
-							$data = array((string)$lab1->v);
-						} else{
-							array_push($data,(string)$lab1->v);
-						}
+						array_push($data,(string)$lab1->v);
 					}
 				}
-				if($datas == null){
-					$datas = array($data);
-				} else{
-					array_push($datas,$data);
-				}
+				array_push($datas,$data);
 			}
 		}
 
@@ -125,11 +113,11 @@ class DiagrammsController extends AppController{
 	private static function pieChart($labels){
 
 		/**
-		 *@todo Labels 
+		 *@todo Labels
 		 */
-		
-		$label = null;
-		$colour = null;
+
+		$label = array();
+		$colour = array();
 		$datas = null;
 		$options = '';
 		$namespace = $labels->getNamespaces(true);
@@ -138,23 +126,14 @@ class DiagrammsController extends AppController{
 		foreach ($labels->ser->children($namespace['c']) as $key=>$value){
 
 			if($key == 'dPt'){
-				if($colour == null){
-					$colour = array((string)$value->spPr->children($namespace['a'])->solidFill->srgbClr->attributes()->val);
-				} else{
-					array_push($colour,(string)$value->spPr->children($namespace['a'])->solidFill->srgbClr->attributes()->val);
-				}
+				array_push($colour,(string)$value->spPr->children($namespace['a'])->solidFill->srgbClr->attributes()->val);
 			}
 
 			if($key == 'val'){
 				foreach ($value->numRef->numCache->children($namespace['c']) as $key1=>$value1){
 
 					if($key1 == 'pt'){
-
-						if($label == null){
-							$label = array((string)$value1->v);
-						} else{
-							array_push($label,(string)$value1->v);
-						}
+						array_push($label,(string)$value1->v);
 					}
 				}
 			}

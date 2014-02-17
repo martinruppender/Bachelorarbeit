@@ -18,13 +18,13 @@ class WritersController extends Appcontroller{
 		//Enlesen der zu editirenden HTML und CSS Files
 		$fileHTML = file_get_contents($outputfolder.DS.'index.html', "r+");
 		$fileCSS = file_get_contents($outputfolder.DS.'css'.DS.'konverter.css', "r+");
-		
+
 		$fileHTML = ereg_replace("inputtitel",$fileName, $fileHTML);
 
 		$inputsildes = '';
 		$css = '';
 
-		//Durchgehen der einzelenen Slides und Hinhalt in HTML/CSS fähigen String konvertieren 
+		//Durchgehen der einzelenen Slides und Hinhalt in HTML/CSS fähigen String konvertieren
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
@@ -45,6 +45,7 @@ class WritersController extends Appcontroller{
 	private static function converter($path,$slide){
 
 		$css = '';
+		$id = array();
 		//Laden der XML Inhalte in Variablen
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
@@ -56,10 +57,23 @@ class WritersController extends Appcontroller{
 			$xml->registerXPathNamespace($key, $value);
 		}
 
-		/**
-		 * @todo Prüfen auf  Animierungen
-		 */
-		
+		$timing = $xml->xpath('//p:timing');
+		/*
+		 if(isset($timing[0]->bldLst->bldP)){
+		foreach ($timing[0]->bldLst->children($namespaces['p']) as $key => $value){
+		array_push($id, (string)$value->attributes()->spid);
+		}
+		}*/
+
+		$node = $timing[0]->children($namespaces['p'])->tnLst->par;
+
+		while($node->getName() != 'par'){
+			$node = $node->getChildren();
+		}
+
+		if($node->children($namespaces['p'])->cTn->children($namespaces['p'])->count() != 0){
+			WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces);
+		}
 		//Hintergrundfarbe für die Seite setzen und in CSS übergeben
 		$node = $xml->xpath('//p:cSld');
 		$child = $node[0]->children($namespaces['p']);
@@ -87,6 +101,14 @@ class WritersController extends Appcontroller{
 			//Prüfen ob es sich um ein Textelement handelt
 			if($key == 'sp'){
 
+				$vID = (string)$node->nvSpPr->cNvPr->attributes()->id;
+
+				$frag = '';
+
+				if(in_array($vID, $id)){
+					$frag = 'fragment';
+				}
+					
 				//Position und Größe innerhalb der Slide bestimmen
 				if(isset($node->spPr->xfrm)){
 					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
@@ -106,7 +128,7 @@ class WritersController extends Appcontroller{
 				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
 
 				//Div Erstellen und Text aus Slide einlesen und an HTML übergeben
-				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'sp'.$spNr++.'">';
+				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$spNr++.'">';
 				foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
 					//Textknotenfiltern und Texteditor aufrufen
 					if($key1 == 'p'){
@@ -119,6 +141,14 @@ class WritersController extends Appcontroller{
 			//Prüfen ob es sich um ein Bild- oder Audioelement handelt
 			if($key == 'pic'){
 
+				$vID = (string)$node->nvPicPr->cNvPr->attributes()->id;
+
+				$frag = '';
+
+				if(in_array($vID, $id)){
+					$frag = 'fragment';
+				}
+
 				//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
 				if(isset($node->spPr)){
 					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
@@ -130,7 +160,7 @@ class WritersController extends Appcontroller{
 				$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 
 				//Feld erzeugen
-				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'pic'.$picNr++.'">';
+				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'pic'.$picNr++.'">';
 				//Unterscheidung ob es sich um ein Bild oder Bild mit Audio handelt entsprechenden Converter aufrufen und an HTML übergeben
 				if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
 
@@ -145,7 +175,15 @@ class WritersController extends Appcontroller{
 
 			//Prüfen ob es sich um ein Diagramm handelt
 			if($key == 'graphicFrame'){
-				
+
+				$vID = (string)$node->nvGraphicFramePr->cNvPr->attributes()->id;
+
+				$frag = '';
+
+				if(in_array($vID, $id)){
+					$frag = 'fragment';
+				}
+
 				//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
 				if(isset($node->xfrm)){
 					$size = $node->xfrm->children($namespaces['a'])->ext->attributes();
@@ -154,11 +192,11 @@ class WritersController extends Appcontroller{
 					$size = array(0,0);
 					$pos = array(0,0);
 				}
-				
+
 				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 
 				//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
-				$inputsildes = $inputsildes.'<div class="'.substr($slide,0,-4).'gFrame'.$picNr++.'">';
+				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
 				$inputsildes = $inputsildes.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size);
 				$inputsildes = $inputsildes.'</div>';
 			}
@@ -170,5 +208,22 @@ class WritersController extends Appcontroller{
 
 		//Rückgabe von HTML und CSS
 		return array($inputsildes, $css);
+	}
+
+	private static function findTimingIDs($node, $namespaces){
+		
+		if ($node->getName() != 'spTgt') {
+			$c = $node->count();
+			//$node = $node->children($namespaces['p']);
+			if($c == 1){
+				WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces);
+			}
+			else{
+				debug($node[$c-1]);
+				WritersController::findTimingIDs($node[$c-1], $namespaces);
+			}
+		}else{
+			debug($node);
+		}
 	}
 }
