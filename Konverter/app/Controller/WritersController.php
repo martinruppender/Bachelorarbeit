@@ -58,22 +58,13 @@ class WritersController extends Appcontroller{
 		}
 
 		$timing = $xml->xpath('//p:timing');
-		/*
-		 if(isset($timing[0]->bldLst->bldP)){
-		foreach ($timing[0]->bldLst->children($namespaces['p']) as $key => $value){
-		array_push($id, (string)$value->attributes()->spid);
-		}
-		}*/
 
 		$node = $timing[0]->children($namespaces['p'])->tnLst->par;
 
-		while($node->getName() != 'par'){
-			$node = $node->getChildren();
-		}
+		//if($node->children($namespaces['p'])->cTn->children($namespaces['p'])->count() != 0){
+		$id = WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces, $id);
+		//}
 
-		if($node->children($namespaces['p'])->cTn->children($namespaces['p'])->count() != 0){
-			WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces);
-		}
 		//Hintergrundfarbe für die Seite setzen und in CSS übergeben
 		$node = $xml->xpath('//p:cSld');
 		$child = $node[0]->children($namespaces['p']);
@@ -94,7 +85,6 @@ class WritersController extends Appcontroller{
 		//Objektnummerierung innheralb der Slide für CSS
 		$spNr = 0;
 		$picNr = 0;
-
 		//Einzele Slideinhalte auslesen und bestimmen
 		foreach ($subnode as $key=>$node){
 
@@ -121,21 +111,30 @@ class WritersController extends Appcontroller{
 
 				//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
 				$background ='';
+				
 				if(!isset($node->spPr->noFill)){
-
+					
 					$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
 				}
 				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
 
 				//Div Erstellen und Text aus Slide einlesen und an HTML übergeben
-				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$spNr++.'">';
+				$text = '';
+				$text = $text.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$spNr++.'">';
+
 				foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
 					//Textknotenfiltern und Texteditor aufrufen
 					if($key1 == 'p'){
-						$inputsildes = $inputsildes.TextController::getText($node1, $namespaces);
+						$text = $text.TextController::getText($node1, $namespaces);
 					}
 				}
-				$inputsildes = $inputsildes.'</div>';
+				if($frag == ''){
+					$inputsildes = $inputsildes.$text.'</div>';
+				}else{
+					$k = array_search($vID, $id);
+					$narray = array($k =>array($vID=>($text.'</div>')));
+					$id = array_replace($id, $narray);
+				}
 			}
 
 			//Prüfen ob es sich um ein Bild- oder Audioelement handelt
@@ -159,19 +158,29 @@ class WritersController extends Appcontroller{
 				}
 				$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 
+				$pic = '';
+
 				//Feld erzeugen
-				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'pic'.$picNr++.'">';
+				$pic = $pic.'<div class="'.$frag.' '.substr($slide,0,-4).'pic'.$picNr++.'">';
 				//Unterscheidung ob es sich um ein Bild oder Bild mit Audio handelt entsprechenden Converter aufrufen und an HTML übergeben
 				if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
 
-					$inputsildes = $inputsildes.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
-					$inputsildes = $inputsildes.MediaController::getAudio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
+					$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
+					$pic = $pic.MediaController::getAudio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
 
 				}else{
-					$inputsildes = $inputsildes.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
+					$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
 				}
-				$inputsildes = $inputsildes.'</div>';
+
+				if($frag == ''){
+					$inputsildes = $inputsildes.$pic.'</div>';
+				}else{
+					$k = array_search($vID, $id);
+					$narray = array($k =>array($vID=>($pic.'</div>')));
+					$id = array_replace($id, $narray);
+				}
 			}
+
 
 			//Prüfen ob es sich um ein Diagramm handelt
 			if($key == 'graphicFrame'){
@@ -194,15 +203,27 @@ class WritersController extends Appcontroller{
 				}
 
 				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-
+				$graf='';
 				//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
-				$inputsildes = $inputsildes.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
-				$inputsildes = $inputsildes.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size);
-				$inputsildes = $inputsildes.'</div>';
+				$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
+				$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size);
+
+				if($frag == ''){
+					$inputsildes = $inputsildes.$graf.'</div>';
+				}else{
+					$k = array_search($vID, $id);
+					$narray = array($k =>array($vID=>($graf.'</div>')));
+					$id = array_replace($id, $narray);
+				}
 			}
 
 		}
 
+		if($id != null){
+			foreach ($id as $key => $vID){
+				$inputsildes = $inputsildes.$id[$key][key($vID)];
+			}
+		}
 		//Schließen der Seite
 		$inputsildes = $inputsildes.'</div></section>';
 
@@ -210,20 +231,20 @@ class WritersController extends Appcontroller{
 		return array($inputsildes, $css);
 	}
 
-	private static function findTimingIDs($node, $namespaces){
-		
-		if ($node->getName() != 'spTgt') {
-			$c = $node->count();
-			//$node = $node->children($namespaces['p']);
-			if($c == 1){
-				WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces);
+	private static function findTimingIDs($node, $namespaces, $id){
+
+		if($node->getname() == 'spTgt'){
+			$spid = (string) $node->attributes()->spid;
+			if(!in_array($spid, $id)){
+				array_push($id, $spid);
+				return $id;
 			}
-			else{
-				debug($node[$c-1]);
-				WritersController::findTimingIDs($node[$c-1], $namespaces);
+
+		}elseif($node->count() != 0){
+			foreach ($node->children($namespaces['p']) as $key=>$value){
+				$id = WritersController::findTimingIDs($value[0], $namespaces, $id);
 			}
-		}else{
-			debug($node);
 		}
+		return $id;
 	}
 }

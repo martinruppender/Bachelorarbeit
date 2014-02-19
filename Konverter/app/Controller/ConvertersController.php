@@ -1,5 +1,3 @@
-//fracment
-
 <?php
 
 App::uses('File', 'Utility');
