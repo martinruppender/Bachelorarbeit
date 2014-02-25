@@ -28,7 +28,7 @@ class ConvertersController extends AppController{
 
 			FoldersController::copyMedia($tempFolder.DS.'ppt'.DS.'media', $outputfolder.DS.'media');
 			
-			WritersController::writeDatas($outputfolder, $tempFolder.DS.'ppt'.DS.'slides', $fileName);
+			WritersController::writeDatas($outputfolder, $tempFolder.DS.'ppt', $fileName);
 		}
 	}
 }

@@ -1,8 +1,14 @@
 <?php
 
+App::import('Controller','Color');
+
 class DiagrammsController extends AppController{
 
-	public static function getDiagramms($xmlreal, $path, $node, $size){
+	private static $colormap;
+
+	public static function getDiagramms($xmlreal, $path, $node, $size, $colormap){
+
+		DiagrammsController::$colormap = $colormap;
 
 		$id =  (string)$node->attributes('r', true);
 		$diagrammdatas = '';
@@ -16,12 +22,12 @@ class DiagrammsController extends AppController{
 				$chart = $chart->children($namespace['c'])->chart->plotArea;
 				if(isset($chart->barChart)){
 
-					$diagrammdatas = DiagrammsController::barChart($chart->barChart);
+					$diagrammdatas = DiagrammsController::barChart($chart->barChart, $colormap);
 				}
 
 				if(isset($chart->pieChart)){
 
-					$diagrammdatas = DiagrammsController::pieChart($chart->pieChart);
+					$diagrammdatas = DiagrammsController::pieChart($chart->pieChart, $colormap);
 				}
 			}
 		}
@@ -35,31 +41,41 @@ class DiagrammsController extends AppController{
 		</script>';
 	}
 
-	private static function barChart($labels){
+	private static function barChart($labels, $colormap){
 
 		$label = array();
 		$datas = array();
+		$colors;
 
 		$namespace = $labels->getNamespaces(true);
-		$flag = false;
 
-		foreach ($labels->children($namespace['c']) as $key=>$lab){
+		foreach ($labels->ser->children($namespace['c']) as $key=>$lab){
 
-			if($key == 'ser'){
-
-				if($flag == false){
-
-					foreach ($lab->cat->strRef->strCache->children($namespace['c']) as $key1=>$lab1){
-							
-						if($key1 == 'pt'){
-
-							array_push($label,(string)$lab1->v);
-						}
-					}
-					$flag = true;
+			if($key == 'spPr'){
+				if(array_key_exists('srgbClr',$lab->children($namespace['a'])->solidFill)){
+					$color = (string)$lab->children($namespace['a'])->solidFill->srgbClr->attributes()->val;
+					$r = hexdec(substr($color,0,2));
+					$g = hexdec(substr($color,2,2));
+					$b = hexdec(substr($color,4,2));
+					$colors = array($r, $g, $b);
+				}elseif(array_key_exists('schemeClr',$lab->children($namespace['a'])->solidFill)){
+					$colors  = ColorController::calculatNewColor($lab->children($namespace['a'])->solidFill->schemeClr, $namespace, DiagrammsController::$colormap['theme1']);
 				}
+			}
+
+			if($key == 'cat'){
+
+				foreach ($lab->strRef->strCache->children($namespace['c']) as $key1=>$lab1){
+
+					if($key1 == 'pt'){
+
+						array_push($label,(string)$lab1->v);
+					}
+				}
+			}
+			if($key == 'val'){
 				$data = array();
-				foreach ($lab->val->numRef->numCache->children($namespace['c']) as $key1=>$lab1){
+				foreach ($lab->numRef->numCache->children($namespace['c']) as $key1=>$lab1){
 
 					if($key1 == 'pt'){
 
@@ -89,13 +105,14 @@ class DiagrammsController extends AppController{
 					$val = $val.','.$value;
 				}
 			}
+
 			if($values == null){
-				$values = '{fillColor : "rgba(220,220,220,0.5)",
+				$values = '{fillColor : "rgba('.$colors[0].','.$colors[1].','.$colors[2].',1)",
 				strokeColor : "rgba(220,220,220,1)",
 				data : ['.$val.']
 			}';
 			}else{
-				$values = $values.',{fillColor : "rgba(220,220,220,0.5)",
+				$values = $values.',{fillColor : "rgba('.$colors[0].','.$colors[1].','.$colors[2].',1)",
 				strokeColor : "rgba(220,220,220,1)",
 				data : ['.$val.']
 			}';
@@ -110,7 +127,7 @@ class DiagrammsController extends AppController{
 		return array('Bar(data);',$data);
 	}
 
-	private static function pieChart($labels){
+	private static function pieChart($labels, $colormap){
 
 		/**
 		 *@todo Labels

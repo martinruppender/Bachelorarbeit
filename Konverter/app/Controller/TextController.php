@@ -1,12 +1,8 @@
 <?php
 
 class TextController extends AppController{
-	
-	public static function  getText($node, $namespaces){
-		return  TextController::text($node, $namespaces);
-	}
-	
-	private static function text($node, $namespaces){
+		
+	public static function text($node, $namespace, $colormap){
 	
 		$openDIV = false;
 		$text ='';
@@ -34,14 +30,14 @@ class TextController extends AppController{
 				$startTags ='';
 				$endTags ='';
 	
-				foreach ($node->children($namespaces['a'])as $key1=>$node1){
+				foreach ($node->children($namespace['a'])as $key1=>$node1){
 	
 					//Prüfen auf Formatierungselement
 					if($key1 =='rPr'){
 	
 						//Prüfen auf Fontelement und ensprechende Änderungen sowie übergabe in HTML
-						if($node1->children($namespaces['a'])){
-							$font = $node1->children($namespaces['a']);
+						if($node1->children($namespace['a'])){
+							$font = $node1->children($namespace['a']);
 	
 							$startTags = '<font';
 	
@@ -54,15 +50,14 @@ class TextController extends AppController{
 							//Prüfen ob Farbe geändert wurde
 							if(array_key_exists('solidFill', $font)){
 	
-								if(array_key_exists('srgbClr',$font->solidFill->children($namespaces['a']))){
-									$colour = $font->solidFill->srgbClr[0]->attributes();
-									$startTags = $startTags.' color="#'.(string)$colour['val'].'">';
+								if(array_key_exists('srgbClr',$font->solidFill->children($namespace['a']))){
+									$color = $font->solidFill->srgbClr[0]->attributes();
+									$startTags = $startTags.' color="#'.(string)$color['val'].'">';
 								}
-								if(array_key_exists('schemeClr',$font->solidFill->children($namespaces['a']))){
-									$colour = $font->solidFill->schemeClr[0]->children($namespaces['a']);
-									#$colour = $colour[0]->attributes();
-									#(string)$colour['val'];
-									$startTags = $startTags.' color="#000000">';
+								if(array_key_exists('schemeClr',$font->solidFill->children($namespace['a']))){
+									$colors  = ColorController::calculatNewColor($font->solidFill->schemeClr, $namespace, $colormap['theme1']);
+									$color = dechex($colors[0]).dechex($colors[1]).dechex($colors[2]);
+									$startTags = $startTags.' color="#'.$color.'">';
 								}
 	
 							}else{

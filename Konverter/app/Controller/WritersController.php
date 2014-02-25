@@ -5,13 +5,18 @@ App::import('Controller','Messages');
 App::import('Controller','Text');
 App::import('Controller','Media');
 App::import('Controller','Diagramms');
+App::import('Controller','Color');
 
 class WritersController extends Appcontroller{
 
+	private static $colormap;
+
 	public static function writeDatas($outputfolder, $tempFolder, $fileName){
 
+		WritersController::$colormap = ColorController::getColor($tempFolder);
+
 		//Einlesen aller Slides im Ordner Silde
-		$slides = scandir($tempFolder);
+		$slides = scandir($tempFolder.DS.'slides');
 		//Alphanummerische Sortierung der Slides zwecks korrekter Wiedergabe der PP-Seiten
 		natsort($slides);
 
@@ -69,14 +74,25 @@ class WritersController extends Appcontroller{
 		$node = $xml->xpath('//p:cSld');
 		$child = $node[0]->children($namespaces['p']);
 		if(isset($child->bg)){
-			$child = $child->bg->bgPr;
-			$child = $child->children($namespaces['a']);
-			$backgroundslide = (string) $child->solidFill->srgbClr->attributes();
+			$child = $child->bg->bgPr->children($namespaces['a']);
+			foreach ($child as $k => $bg){
+				if($k == 'solidFill'){
+					if(isset($bg->children($namespaces['a'])->srgbClr)){
+						$backgroundslide = (string) $bg->children($namespaces['a'])->srgbClr->attributes();
+					}elseif (isset($bg->children($namespaces['a'])->schemeClr)){
 
+						$colors  = ColorController::calculatNewColor($bg->children($namespaces['a'])->schemeClr, $namespaces, WritersController::$colormap['theme1']);
+						$backgroundslide = dechex($colors[0]).dechex($colors[1]).dechex($colors[2]);
+					}
+					$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
+				}elseif($k == 'blipFill'){
+					$css = $css.'.'.substr($slide,0,-4).'{background-image: url(../'.substr(MediaController::getImages($xmlreal, $bg->children($namespaces['a'])->blip),10,-13).'); background-size: 100% 100%; position:absolute; width: 25.4cm; height: 19.05cm; }';
+				}
+			}
 		}else{
 			$backgroundslide = 'FFFFFF';
+			$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
 		}
-		$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
 
 		//Seite für HTML öffnen
 		$inputsildes = '<section><div class="'.substr($slide,0,-4).'">';
@@ -98,7 +114,7 @@ class WritersController extends Appcontroller{
 				if(in_array($vID, $id)){
 					$frag = 'fragment';
 				}
-					
+
 				//Position und Größe innerhalb der Slide bestimmen
 				if(isset($node->spPr->xfrm)){
 					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
@@ -111,10 +127,20 @@ class WritersController extends Appcontroller{
 
 				//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
 				$background ='';
-				
+
 				if(!isset($node->spPr->noFill)){
-					
-					$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
+						
+					if(array_key_exists('schemeClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
+						
+						$colors  = ColorController::calculatNewColor($node->spPr->children($namespaces['a'])->solidFill->schemeClr, $namespaces, WritersController::$colormap['theme1']);
+						
+						debug($colors);
+						$background = 'background-color: #'.dechex($colors[0]).dechex($colors[1]).'0'.dechex($colors[2]);
+						debug($background);
+					}
+					else{
+						$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
+					}
 				}
 				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
 
@@ -125,7 +151,7 @@ class WritersController extends Appcontroller{
 				foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
 					//Textknotenfiltern und Texteditor aufrufen
 					if($key1 == 'p'){
-						$text = $text.TextController::getText($node1, $namespaces);
+						$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
 					}
 				}
 				if($frag == ''){
@@ -181,7 +207,6 @@ class WritersController extends Appcontroller{
 				}
 			}
 
-
 			//Prüfen ob es sich um ein Diagramm handelt
 			if($key == 'graphicFrame'){
 
@@ -206,7 +231,7 @@ class WritersController extends Appcontroller{
 				$graf='';
 				//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
 				$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
-				$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size);
+				$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
 
 				if($frag == ''){
 					$inputsildes = $inputsildes.$graf.'</div>';
@@ -216,7 +241,6 @@ class WritersController extends Appcontroller{
 					$id = array_replace($id, $narray);
 				}
 			}
-
 		}
 
 		if($id != null){
