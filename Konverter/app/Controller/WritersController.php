@@ -33,6 +33,7 @@ class WritersController extends Appcontroller{
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
+					debug($slide);
 					$output = WritersController::converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide);
 					$inputsildes = $inputsildes.$output[0];
 					$css = $css.$output[1];
@@ -64,11 +65,10 @@ class WritersController extends Appcontroller{
 
 		$timing = $xml->xpath('//p:timing');
 
-		$node = $timing[0]->children($namespaces['p'])->tnLst->par;
-
-		//if($node->children($namespaces['p'])->cTn->children($namespaces['p'])->count() != 0){
-		$id = WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces, $id);
-		//}
+		if($timing != null){
+			$node = $timing[0]->children($namespaces['p'])->tnLst->par;
+			$id = WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces, $id);
+		}
 
 		//Hintergrundfarbe für die Seite setzen und in CSS übergeben
 		$node = $xml->xpath('//p:cSld');
@@ -128,18 +128,21 @@ class WritersController extends Appcontroller{
 				//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
 				$background ='';
 
-				if(!isset($node->spPr->noFill)){
+				if($node->spPr->children($namespaces['a'])->count() > 0){
 						
-					if(array_key_exists('schemeClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
-						
-						$colors  = ColorController::calculatNewColor($node->spPr->children($namespaces['a'])->solidFill->schemeClr, $namespaces, WritersController::$colormap['theme1']);
-						
-						debug($colors);
-						$background = 'background-color: #'.dechex($colors[0]).dechex($colors[1]).'0'.dechex($colors[2]);
-						debug($background);
-					}
-					else{
-						$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
+					if(!isset($node->spPr->noFill) && !isset($node->spPr->xfrm)){
+
+						if(array_key_exists('schemeClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
+
+							$colors  = ColorController::calculatNewColor($node->spPr->children($namespaces['a'])->solidFill->schemeClr, $namespaces, WritersController::$colormap['theme1']);
+
+							debug($colors);
+							$background = 'background-color: #'.dechex($colors[0]).dechex($colors[1]).'0'.dechex($colors[2]);
+							debug($background);
+						}
+						elseif(array_key_exists('srgbClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
+							$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
+						}
 					}
 				}
 				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
@@ -229,16 +232,17 @@ class WritersController extends Appcontroller{
 
 				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 				$graf='';
-				//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
-				$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
-				$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
-
-				if($frag == ''){
-					$inputsildes = $inputsildes.$graf.'</div>';
-				}else{
-					$k = array_search($vID, $id);
-					$narray = array($k =>array($vID=>($graf.'</div>')));
-					$id = array_replace($id, $narray);
+				if(array_key_exists ('c',$namespaces)){
+					//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
+					$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
+					$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
+					if($frag == ''){
+						$inputsildes = $inputsildes.$graf.'</div>';
+					}else{
+						$k = array_search($vID, $id);
+						$narray = array($k =>array($vID=>($graf.'</div>')));
+						$id = array_replace($id, $narray);
+					}
 				}
 			}
 		}

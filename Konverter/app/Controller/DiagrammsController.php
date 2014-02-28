@@ -9,36 +9,41 @@ class DiagrammsController extends AppController{
 	public static function getDiagramms($xmlreal, $path, $node, $size, $colormap){
 
 		DiagrammsController::$colormap = $colormap;
+		$flag;
 
 		$id =  (string)$node->attributes('r', true);
-		$diagrammdatas = '';
-		foreach ($xmlreal->children() as $child) {
+		if($id != ''){
+			$diagrammdatas = '';
+			foreach ($xmlreal->children() as $child) {
 
-			$children = $child->attributes();
-			if($children->Id == $id){
-				$target = $children->Target;
-				$chart =  new SimpleXMLElement(file_get_contents(substr($path,0,-7).substr($target,2)));
-				$namespace = $chart->getNamespaces(true);
-				$chart = $chart->children($namespace['c'])->chart->plotArea;
-				if(isset($chart->barChart)){
+				$children = $child->attributes();
+				if($children->Id == $id){
+					$target = $children->Target;
+					$chart =  new SimpleXMLElement(file_get_contents(substr($path,0,-7).substr($target,2)));
+					$namespace = $chart->getNamespaces(true);
+					$chart = $chart->children($namespace['c'])->chart->plotArea;
+					if(isset($chart->barChart)){
 
-					$diagrammdatas = DiagrammsController::barChart($chart->barChart, $colormap);
-				}
+						$diagrammdatas = DiagrammsController::barChart($chart->barChart, $colormap);
+					}
 
-				if(isset($chart->pieChart)){
+					if(isset($chart->pieChart)){
 
-					$diagrammdatas = DiagrammsController::pieChart($chart->pieChart, $colormap);
+						$diagrammdatas = DiagrammsController::pieChart($chart->pieChart, $colormap);
+					}
 				}
 			}
-		}
 
-		$name = substr($target,10,-4);
-		return '<canvas id="'.$name.'" width="'.round($size[0]/9525).'" height="'.round($size[1]/9525).'"></canvas>
-		<script>
-		'.$diagrammdatas[1].'
-		var ctx = document.getElementById("'.$name.'").getContext("2d");
-		var myNewChart = new Chart(ctx).'.$diagrammdatas[0].';
-		</script>';
+			$name = substr($target,10,-4);
+			return '<canvas id="'.$name.'" width="'.round($size[0]/9525).'" height="'.round($size[1]/9525).'"></canvas>
+			<script>
+			'.$diagrammdatas[1].'
+			var ctx = document.getElementById("'.$name.'").getContext("2d");
+			var myNewChart = new Chart(ctx).'.$diagrammdatas[0].';
+			</script>';
+		}else{
+			return '';
+		}
 	}
 
 	private static function barChart($labels, $colormap){
