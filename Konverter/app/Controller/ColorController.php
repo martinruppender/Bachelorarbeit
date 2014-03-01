@@ -1,4 +1,5 @@
 <?php
+App::import('Controller','Media');
 
 class ColorController extends AppController{
 
@@ -50,7 +51,7 @@ class ColorController extends AppController{
 	}
 
 	public static function calculatNewColor($node, $namespaces, $colormap){
-		
+
 		$colors = $colormap[(string)$node->attributes()->val];
 		$r = hexdec(substr($colors,0,2));
 		$g = hexdec(substr($colors,2,2));
@@ -74,6 +75,49 @@ class ColorController extends AppController{
 		return $color;
 	}
 
+	public static function getBackground($node, $colormap, $xmlreal){
+
+		$namespaces = $node->getNamespaces(true);
+
+		if(array_key_exists('solidFill', $node)){
+				
+			if(array_key_exists('schemeClr',$node->solidFill->children($namespaces['a']))){
+				$colors  = ColorController::calculatNewColor($node->solidFill->schemeClr, $namespaces, $colormap);
+				$background = 'background-color: #'.ColorController::rgbToHex($colors);
+				return $background;
+			}
+			if(array_key_exists('srgbClr',$node->solidFill->children($namespaces['a']))){
+				$background = 'background-color: #'.(string)$node->solidFill->srgbClr->attributes();
+				return $background;
+			}
+		}
+		if(array_key_exists('blipFill', $node)){
+			return 'background-image: url(../'.substr(MediaController::getImages($xmlreal, $node->children($namespaces['a'])->blip),10,-13).'); background-size: 100% 100%;';
+		}
+		if(array_key_exists('noFill', $node)){
+			return '';
+		}
+	}
+
+	private static function rgbToHex($colors){
+		
+		$r = dechex($colors[0]);
+		$g = dechex($colors[1]);
+		$b = dechex($colors[2]); 
+
+		if(strlen($r) == 1){
+			$r = '0'.$r;
+		}
+		if(strlen($g) == 1){
+			$g = '0'.$g;
+		}
+		if(strlen($b) == 1){
+			$b = '0'.$b;
+		}
+
+		return $r.$g.$b;
+	}
+	
 	private static function hslToRgb($color){
 
 		$h = $color[0];
@@ -163,4 +207,5 @@ class ColorController extends AppController{
 
 		return array( round( $h, 2 ), round( ($s*100), 2 ), round( ($l*100), 2 ) );
 	}
+
 }

@@ -6,6 +6,8 @@ App::import('Controller','Text');
 App::import('Controller','Media');
 App::import('Controller','Diagramms');
 App::import('Controller','Color');
+App::import('Controller','PPTXForms');
+App::import('Controller', 'Nodes');
 
 class WritersController extends Appcontroller{
 
@@ -33,7 +35,6 @@ class WritersController extends Appcontroller{
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
-					debug($slide);
 					$output = WritersController::converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide);
 					$inputsildes = $inputsildes.$output[0];
 					$css = $css.$output[1];
@@ -50,206 +51,153 @@ class WritersController extends Appcontroller{
 
 	private static function converter($path,$slide){
 
-		$css = '';
-		$id = array();
 		//Laden der XML Inhalte in Variablen
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
 		$xml = new SimpleXMLElement(file_get_contents($path.DS.$slide));
-
+		$xml = NodesController::registerNamespaces($xml);
 		$namespaces = $xml->getNamespaces(true);
 
-		//Registrieren der Namespaces im XML
-		foreach ($namespaces as $key=>$value){
-			$xml->registerXPathNamespace($key, $value);
-		}
-
+		//Auslesen aller Elemente welche Animiert sind
+		$id = array();
 		$timing = $xml->xpath('//p:timing');
-
 		if($timing != null){
 			$node = $timing[0]->children($namespaces['p'])->tnLst->par;
 			$id = WritersController::findTimingIDs($node->children($namespaces['p']), $namespaces, $id);
 		}
 
-		//Hintergrundfarbe für die Seite setzen und in CSS übergeben
+		//Elternknoten für Slideelemente setzen
 		$node = $xml->xpath('//p:cSld');
-		$child = $node[0]->children($namespaces['p']);
-		if(isset($child->bg)){
-			$child = $child->bg->bgPr->children($namespaces['a']);
-			foreach ($child as $k => $bg){
-				if($k == 'solidFill'){
-					if(isset($bg->children($namespaces['a'])->srgbClr)){
-						$backgroundslide = (string) $bg->children($namespaces['a'])->srgbClr->attributes();
-					}elseif (isset($bg->children($namespaces['a'])->schemeClr)){
+		$node = $node[0]->children($namespaces['p']);
 
-						$colors  = ColorController::calculatNewColor($bg->children($namespaces['a'])->schemeClr, $namespaces, WritersController::$colormap['theme1']);
-						$backgroundslide = dechex($colors[0]).dechex($colors[1]).dechex($colors[2]);
-					}
-					$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
-				}elseif($k == 'blipFill'){
-					$css = $css.'.'.substr($slide,0,-4).'{background-image: url(../'.substr(MediaController::getImages($xmlreal, $bg->children($namespaces['a'])->blip),10,-13).'); background-size: 100% 100%; position:absolute; width: 25.4cm; height: 19.05cm; }';
-				}
-			}
+		//Hintergrundfarbe für die Seite setzen und in CSS übergeben
+		if(isset($node->bg)){
+			$backgroundnode = $node->bg->bgPr->children($namespaces['a']);
+			$backgroundslide = ColorController::getBackground($backgroundnode, WritersController::$colormap['theme1'], $xmlreal);
+
 		}else{
-			$backgroundslide = 'FFFFFF';
-			$css = $css.'.'.substr($slide,0,-4).'{background-color: #'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
+			$backgroundslide = 'background-color: #FFFFFF';
 		}
+
+		$css = '';
+		$css = $css.'.'.substr($slide,0,-4).'{'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
 
 		//Seite für HTML öffnen
 		$inputsildes = '<section><div class="'.substr($slide,0,-4).'">';
 		$node = $xml->xpath('//p:spTree');
 		$subnode = $node[0]->children($namespaces['p']);
+
 		//Objektnummerierung innheralb der Slide für CSS
-		$spNr = 0;
-		$picNr = 0;
+		$slideNr = 0;
+		$objekctNr = 0;
+		$objecttyps = array('sp','cxnSp','graphicFrame','pic');
 		//Einzele Slideinhalte auslesen und bestimmen
 		foreach ($subnode as $key=>$node){
 
-			//Prüfen ob es sich um ein Textelement handelt
-			if($key == 'sp'){
+			if(in_array($key, $objecttyps)){
 
-				$vID = (string)$node->nvSpPr->cNvPr->attributes()->id;
+				$keyname = 'nv'.ucfirst($key).'Pr';
 
+				//prüfen ob Element animiert ist
+				$nodeID = (string)$node->$keyname->cNvPr->attributes()->id;
 				$frag = '';
-
-				if(in_array($vID, $id)){
+				if(in_array($nodeID, $id)){
 					$frag = 'fragment';
 				}
 
-				//Position und Größe innerhalb der Slide bestimmen
-				if(isset($node->spPr->xfrm)){
-					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
-
-				}else{
-					$size = array(0,0);
-					$pos = array(0,0);
-				}
-
-				//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
-				$background ='';
-
-				if($node->spPr->children($namespaces['a'])->count() > 0){
-						
-					if(!isset($node->spPr->noFill) && !isset($node->spPr->xfrm)){
-
-						if(array_key_exists('schemeClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
-
-							$colors  = ColorController::calculatNewColor($node->spPr->children($namespaces['a'])->solidFill->schemeClr, $namespaces, WritersController::$colormap['theme1']);
-
-							debug($colors);
-							$background = 'background-color: #'.dechex($colors[0]).dechex($colors[1]).'0'.dechex($colors[2]);
-							debug($background);
-						}
-						elseif(array_key_exists('srgbClr',$node->spPr->children($namespaces['a'])->solidFill->children($namespaces['a']))){
-							$background = 'background-color: #'.(string)$node->spPr->children($namespaces['a'])->solidFill->srgbClr->attributes();
-						}
-					}
-				}
-				$css = $css.'.'.substr($slide,0,-4).'sp'.$spNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
-
-				//Div Erstellen und Text aus Slide einlesen und an HTML übergeben
-				$text = '';
-				$text = $text.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$spNr++.'">';
-
-				foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
-					//Textknotenfiltern und Texteditor aufrufen
-					if($key1 == 'p'){
-						$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
-					}
-				}
-				if($frag == ''){
-					$inputsildes = $inputsildes.$text.'</div>';
-				}else{
-					$k = array_search($vID, $id);
-					$narray = array($k =>array($vID=>($text.'</div>')));
-					$id = array_replace($id, $narray);
-				}
-			}
-
-			//Prüfen ob es sich um ein Bild- oder Audioelement handelt
-			if($key == 'pic'){
-
-				$vID = (string)$node->nvPicPr->cNvPr->attributes()->id;
-
-				$frag = '';
-
-				if(in_array($vID, $id)){
-					$frag = 'fragment';
-				}
-
+				$spPr = $node->spPr->children($namespaces['a']);
 				//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
-				if(isset($node->spPr)){
-					$size = $node->spPr->children($namespaces['a'])->xfrm->ext->attributes();
-					$pos = $node->spPr->children($namespaces['a'])->xfrm->off->attributes();
-				}else{
-					$size = array(0,0);
-					$pos = array(0,0);
-				}
-				$css = $css.'.'.substr($slide,0,-4).'pic'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-
-				$pic = '';
-
-				//Feld erzeugen
-				$pic = $pic.'<div class="'.$frag.' '.substr($slide,0,-4).'pic'.$picNr++.'">';
-				//Unterscheidung ob es sich um ein Bild oder Bild mit Audio handelt entsprechenden Converter aufrufen und an HTML übergeben
-				if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
-
-					$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
-					$pic = $pic.MediaController::getAudio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
-
-				}else{
-					$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
-				}
-
-				if($frag == ''){
-					$inputsildes = $inputsildes.$pic.'</div>';
-				}else{
-					$k = array_search($vID, $id);
-					$narray = array($k =>array($vID=>($pic.'</div>')));
-					$id = array_replace($id, $narray);
-				}
-			}
-
-			//Prüfen ob es sich um ein Diagramm handelt
-			if($key == 'graphicFrame'){
-
-				$vID = (string)$node->nvGraphicFramePr->cNvPr->attributes()->id;
-
-				$frag = '';
-
-				if(in_array($vID, $id)){
-					$frag = 'fragment';
-				}
-
-				//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
-				if(isset($node->xfrm)){
+				if($key != 'graphicFrame' && $spPr->xfrm->count() > 0){
+					$size = $spPr->xfrm->ext->attributes();
+					$pos = $spPr->xfrm->off->attributes();
+				}elseif($key == 'graphicFrame' && $node->xfrm->children($namespaces['a'])->count() > 0){
 					$size = $node->xfrm->children($namespaces['a'])->ext->attributes();
 					$pos = $node->xfrm->children($namespaces['a'])->off->attributes();
-				}else{
+				}
+				else{
 					$size = array(0,0);
 					$pos = array(0,0);
 				}
 
-				$css = $css.'.'.substr($slide,0,-4).'gFrame'.$picNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-				$graf='';
-				if(array_key_exists ('c',$namespaces)){
-					//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
-					$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$picNr++.'">';
-					$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
-					if($frag == ''){
-						$inputsildes = $inputsildes.$graf.'</div>';
-					}else{
-						$k = array_search($vID, $id);
-						$narray = array($k =>array($vID=>($graf.'</div>')));
-						$id = array_replace($id, $narray);
-					}
+				//Prüfen um was für ein Element es sich handelt
+				switch ($key) {
+					case "cxnSp":
+						PPTXFormsController::getForm($node);
+						break;
+
+						//Textelement
+					case "sp":
+						//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
+						$background = ColorController::getBackground($node->spPr->children($namespaces['a']), WritersController::$colormap['theme1'], $xmlreal);
+						$css = $css.'.'.substr($slide,0,-4).'sp'.$slideNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
+						//Div Erstellen und Text aus Slide einlesen und an HTML übergeben
+						$text = '';
+						$text = $text.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$slideNr++.'">';
+
+						foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
+							//Textknotenfiltern und Texteditor aufrufen
+							if($key1 == 'p'){
+								$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
+							}
+						}
+						if($frag == ''){
+							$inputsildes = $inputsildes.$text.'</div>';
+						}else{
+							$k = array_search($nodeID, $id);
+							$narray = array($k =>array($nodeID=>($text.'</div>')));
+							$id = array_replace($id, $narray);
+						}
+
+						break;
+						//Bild- oder Audioelement
+					case "pic":
+						$css = $css.'.'.substr($slide,0,-4).'pic'.$objekctNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+						$pic = '';
+
+						//Feld erzeugen
+						$pic = $pic.'<div class="'.$frag.' '.substr($slide,0,-4).'pic'.$objekctNr++.'">';
+						//Unterscheidung ob es sich um ein Bild oder Bild mit Audio handelt entsprechenden Converter aufrufen und an HTML übergeben
+						if(isset($node->nvPicPr->nvPr->children($namespaces['a'])->audioFile)){
+
+							$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
+							$pic = $pic.MediaController::getAudio($xmlreal,$node->nvPicPr->nvPr->children($namespaces['a'])->audioFile);
+
+						}else{
+							$pic = $pic.MediaController::getImages($xmlreal, $node->blipFill->children($namespaces['a'])->blip);
+						}
+
+						if($frag == ''){
+							$inputsildes = $inputsildes.$pic.'</div>';
+						}else{
+							$k = array_search($nodeID, $id);
+							$narray = array($k =>array($nodeID=>($pic.'</div>')));
+							$id = array_replace($id, $narray);
+						}
+
+						break;
+						//Diagramm
+					case "graphicFrame":
+						$css = $css.'.'.substr($slide,0,-4).'gFrame'.$objekctNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
+						$graf='';
+						if(array_key_exists ('c',$namespaces)){
+							//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
+							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
+							$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
+							if($frag == ''){
+								$inputsildes = $inputsildes.$graf.'</div>';
+							}else{
+								$k = array_search($vID, $id);
+								$narray = array($k =>array($vID=>($graf.'</div>')));
+								$id = array_replace($id, $narray);
+							}
+						}
+						break;
 				}
 			}
 		}
 
 		if($id != null){
-			foreach ($id as $key => $vID){
-				$inputsildes = $inputsildes.$id[$key][key($vID)];
+			foreach ($id as $key => $nodeID){
+				$inputsildes = $inputsildes.$id[$key][key($nodeID)];
 			}
 		}
 		//Schließen der Seite
