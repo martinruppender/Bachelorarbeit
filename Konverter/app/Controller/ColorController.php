@@ -59,9 +59,9 @@ class ColorController extends AppController{
 
 		$color = array($r,$g,$b);
 
-		$color = ColorController::rgbToHsl($color);
-		//$color[2] = $color[2]*(($lm/100)+1);
 		if($node->children($namespaces['a'])->count() > 0){
+			
+			$color = ColorController::rgbToHsl($color);
 			if($node->children($namespaces['a'])->count() > 1){
 				$lm = ((String)$node->lumOff->attributes()->val)/1000;
 				$color[2] = $lm;
@@ -69,9 +69,8 @@ class ColorController extends AppController{
 				$lm = 100-(((String)$node->lumMod->attributes()->val)/1000);
 			}
 			$color[2] = $lm;
+			$color= ColorController::hslToRgb($color);
 		}
-
-		$color= ColorController::hslToRgb($color);
 		return $color;
 	}
 
@@ -80,7 +79,7 @@ class ColorController extends AppController{
 		$namespaces = $node->getNamespaces(true);
 
 		if(array_key_exists('solidFill', $node)){
-				
+
 			if(array_key_exists('schemeClr',$node->solidFill->children($namespaces['a']))){
 				$colors  = ColorController::calculatNewColor($node->solidFill->schemeClr, $namespaces, $colormap);
 				$background = 'background-color: #'.ColorController::rgbToHex($colors);
@@ -100,10 +99,10 @@ class ColorController extends AppController{
 	}
 
 	private static function rgbToHex($colors){
-		
+
 		$r = dechex($colors[0]);
 		$g = dechex($colors[1]);
-		$b = dechex($colors[2]); 
+		$b = dechex($colors[2]);
 
 		if(strlen($r) == 1){
 			$r = '0'.$r;
@@ -117,7 +116,7 @@ class ColorController extends AppController{
 
 		return $r.$g.$b;
 	}
-	
+
 	private static function hslToRgb($color){
 
 		$h = $color[0];

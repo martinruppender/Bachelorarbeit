@@ -22,6 +22,20 @@ class WritersController extends Appcontroller{
 		//Alphanummerische Sortierung der Slides zwecks korrekter Wiedergabe der PP-Seiten
 		natsort($slides);
 
+		$presentation = new SimpleXMLElement(file_get_contents($tempFolder.DS.'presentation.xml'));
+		$presentation = NodesController::registerNamespaces($presentation);
+		$namespaces = $presentation->getNamespaces(true);
+		$size = $presentation->xpath('//p:sldSz');
+		
+		$size = $size[0]->attributes();
+		
+		$css = 'section{
+			font-size:18pt;
+			font-family: Calibri;
+			width: '.((string)$size['cy']/360000).'cm;
+			height: '.((string)$size['cx']/360000).'cm;
+		}';
+		
 		//Enlesen der zu editirenden HTML und CSS Files
 		$fileHTML = file_get_contents($outputfolder.DS.'index.html', "r+");
 		$fileCSS = file_get_contents($outputfolder.DS.'css'.DS.'konverter.css', "r+");
@@ -29,13 +43,14 @@ class WritersController extends Appcontroller{
 		$fileHTML = ereg_replace("inputtitel",$fileName, $fileHTML);
 
 		$inputsildes = '';
-		$css = '';
+		;
 
 		//Durchgehen der einzelenen Slides und Hinhalt in HTML/CSS fähigen String konvertieren
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
-					$output = WritersController::converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide);
+					debug($slide);
+					$output = WritersController::converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide, $size);
 					$inputsildes = $inputsildes.$output[0];
 					$css = $css.$output[1];
 				}
@@ -49,7 +64,7 @@ class WritersController extends Appcontroller{
 		file_put_contents($outputfolder.DS.'css'.DS.'konverter.css', $fileCSS);
 	}
 
-	private static function converter($path,$slide){
+	private static function converter($path,$slide, $size){
 
 		//Laden der XML Inhalte in Variablen
 		$xmlreal = new SimpleXMLElement(file_get_contents($path.DS.'_rels'.DS.$slide.'.rels'));
@@ -79,7 +94,8 @@ class WritersController extends Appcontroller{
 		}
 
 		$css = '';
-		$css = $css.'.'.substr($slide,0,-4).'{'.$backgroundslide.'; position:absolute; width: 25.4cm; height: 19.05cm; }';
+		debug($size);
+		$css = $css.'.'.substr($slide,0,-4).'{'.$backgroundslide.'; position:absolute; width: '.((string)$size[cx]/360000).'cm; height: '.((string)$size[cy]/360000).'cm; }';
 
 		//Seite für HTML öffnen
 		$inputsildes = '<section><div class="'.substr($slide,0,-4).'">';
