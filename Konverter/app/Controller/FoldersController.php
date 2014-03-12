@@ -14,23 +14,26 @@ class FoldersController extends AppController{
 
 	public static function copyMedia($stcf,$stct){
 
-		$dir = opendir($stcf);
+		if(is_dir($stcf)){
 
-		/*Durchschauen aller Unterferzeichnisse und dateien die sich in $src befinden mit ausnahme von '.' und '..'*/
-		while(false !== ( $file = readdir($dir)) ) {
-			if (( $file != '.' ) && ( $file != '..' )) {
-				/*Prüfen ob es sich bei dem Pfad um eine Datei oder einen Ordner handelt*/
-				if ( is_dir($stcf . '/' . $file) ) {
-					/*recursiver Aufruf für den Fall das es ein Ordner ist*/
-					copyMedia($stcf . '/' . $file,$stct . '/' . $file);
-				}
-				else {
-					/*Kopieren der Datei*/
-					copy($stcf . '/' . $file,$stct . '/' . $file);
+			$dir = opendir($stcf);
+
+			/*Durchschauen aller Unterferzeichnisse und dateien die sich in $src befinden mit ausnahme von '.' und '..'*/
+			while(false !== ( $file = readdir($dir)) ) {
+				if (( $file != '.' ) && ( $file != '..' )) {
+					/*Prüfen ob es sich bei dem Pfad um eine Datei oder einen Ordner handelt*/
+					if ( is_dir($stcf . '/' . $file) ) {
+						/*recursiver Aufruf für den Fall das es ein Ordner ist*/
+						copyMedia($stcf . '/' . $file,$stct . '/' . $file);
+					}
+					else {
+						/*Kopieren der Datei*/
+						copy($stcf . '/' . $file,$stct . '/' . $file);
+					}
 				}
 			}
+			closedir($dir);
 		}
-		closedir($dir);
 	}
 
 	public static function folderRemove($stct){

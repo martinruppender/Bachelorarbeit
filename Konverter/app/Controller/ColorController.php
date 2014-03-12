@@ -59,18 +59,22 @@ class ColorController extends AppController{
 
 		$color = array($r,$g,$b);
 
+		$color = ColorController::rgbToHsl($color);
 		if($node->children($namespaces['a'])->count() > 0){
-			
-			$color = ColorController::rgbToHsl($color);
 			if($node->children($namespaces['a'])->count() > 1){
 				$lm = ((String)$node->lumOff->attributes()->val)/1000;
-				$color[2] = $lm;
 			}else{
-				$lm = 100-(((String)$node->lumMod->attributes()->val)/1000);
+				if(array_key_exists('lumMod',$node)){
+					$lm = 100-(((String)$node->lumMod->attributes()->val)/1000);
+					
+				}else{
+					$lm = $b;
+				}
 			}
 			$color[2] = $lm;
-			$color= ColorController::hslToRgb($color);
 		}
+
+		$color= ColorController::hslToRgb($color);
 		return $color;
 	}
 

@@ -25,17 +25,39 @@ class WritersController extends Appcontroller{
 		$presentation = new SimpleXMLElement(file_get_contents($tempFolder.DS.'presentation.xml'));
 		$presentation = NodesController::registerNamespaces($presentation);
 		$namespaces = $presentation->getNamespaces(true);
+
+		//Auslesen der Foliengröße
 		$size = $presentation->xpath('//p:sldSz');
-		
 		$size = $size[0]->attributes();
-		
+
+		//Auslesen der Textdefaulteinstellungen
+		$font = $presentation->xpath('//p:defaultTextStyle');
+		$font = ((string)$font[0]->children($namespaces['a'])->lvl1pPr->defRPr->attributes()->sz)/100;
+
+		//Standarthintergrund
+		$background ='';
+
+		$slidemaster = new SimpleXMLElement(file_get_contents($tempFolder.DS.'slideMasters'.DS.'slideMaster1.xml'));
+		$slidemaster = NodesController::registerNamespaces($slidemaster);
+		$namespaces = $slidemaster->getNamespaces(true);
+		$slidemaster = $slidemaster->xpath('//p:cSld');
+		$slidemaster = $slidemaster[0]->children($namespaces['p'])->bg->children($namespaces['p']);
+
+		if(isset($slidemaster->bgPr)){
+
+			$slideMasterreal = new SimpleXMLElement(file_get_contents($tempFolder.DS.'slideMasters'.DS.'_rels'.DS.'slideMaster1.xml.rels'));
+			$background = ColorController::getBackground($slidemaster->bgPr->children($namespaces['a']), WritersController::$colormap['theme1'], $slideMasterreal);
+
+		}
+
 		$css = 'section{
-			font-size:18pt;
-			font-family: Calibri;
-			width: '.((string)$size['cy']/360000).'cm;
-			height: '.((string)$size['cx']/360000).'cm;
-		}';
-		
+		font-size: '.$font.'pt;
+		font-family: Calibri;
+		width: 25.4cm;
+		height: 19.05cm;'.
+		$background.'
+	}';
+
 		//Enlesen der zu editirenden HTML und CSS Files
 		$fileHTML = file_get_contents($outputfolder.DS.'index.html', "r+");
 		$fileCSS = file_get_contents($outputfolder.DS.'css'.DS.'konverter.css', "r+");
@@ -49,7 +71,6 @@ class WritersController extends Appcontroller{
 		foreach ($slides as $slide){
 			if($slide[0] != '_'){
 				if(is_dir($slide) == false){
-					debug($slide);
 					$output = WritersController::converter($outputfolder.DS.'TMP'.DS.'ppt'.DS.'slides',$slide, $size);
 					$inputsildes = $inputsildes.$output[0];
 					$css = $css.$output[1];
@@ -60,6 +81,7 @@ class WritersController extends Appcontroller{
 		//Schreiben der HTML/CSS fähigen Stings in die zu editirenden Dateien und speichern.
 		$fileHTML = ereg_replace("inputsildes",$inputsildes, $fileHTML);
 		$fileCSS = ereg_replace("css",$css, $fileCSS);
+
 		file_put_contents($outputfolder.DS.'index.html', $fileHTML);
 		file_put_contents($outputfolder.DS.'css'.DS.'konverter.css', $fileCSS);
 	}
@@ -90,12 +112,11 @@ class WritersController extends Appcontroller{
 			$backgroundslide = ColorController::getBackground($backgroundnode, WritersController::$colormap['theme1'], $xmlreal);
 
 		}else{
-			$backgroundslide = 'background-color: #FFFFFF';
+			$backgroundslide = '';
 		}
 
 		$css = '';
-		debug($size);
-		$css = $css.'.'.substr($slide,0,-4).'{'.$backgroundslide.'; position:absolute; width: '.((string)$size[cx]/360000).'cm; height: '.((string)$size[cy]/360000).'cm; }';
+		$css = $css.'.'.substr($slide,0,-4).'{'.$backgroundslide.'; position:absolute; width: '.((string)$size['cx']/360000).'cm; height: '.((string)$size['cy']/360000).'cm; }';
 
 		//Seite für HTML öffnen
 		$inputsildes = '<section><div class="'.substr($slide,0,-4).'">';
@@ -105,7 +126,7 @@ class WritersController extends Appcontroller{
 		//Objektnummerierung innheralb der Slide für CSS
 		$slideNr = 0;
 		$objekctNr = 0;
-		$objecttyps = array('sp','cxnSp','graphicFrame','pic');
+		$objecttyps = array('sp','cxnSp','graphicFrame','pic', 'graphic');
 		//Einzele Slideinhalte auslesen und bestimmen
 		foreach ($subnode as $key=>$node){
 
@@ -120,18 +141,33 @@ class WritersController extends Appcontroller{
 					$frag = 'fragment';
 				}
 
-				$spPr = $node->spPr->children($namespaces['a']);
-				//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
-				if($key != 'graphicFrame' && $spPr->xfrm->count() > 0){
-					$size = $spPr->xfrm->ext->attributes();
-					$pos = $spPr->xfrm->off->attributes();
-				}elseif($key == 'graphicFrame' && $node->xfrm->children($namespaces['a'])->count() > 0){
-					$size = $node->xfrm->children($namespaces['a'])->ext->attributes();
-					$pos = $node->xfrm->children($namespaces['a'])->off->attributes();
-				}
-				else{
-					$size = array(0,0);
-					$pos = array(0,0);
+				$transform = '';
+
+				if(array_key_exists('spPr',$node)){
+					$spPr = $node->spPr->children($namespaces['a']);
+
+					if(isset($spPr->xfrm) && isset($spPr->xfrm->attributes()->rot)){
+						$transform ='-webkit-transform: rotate('.(((string)$spPr->xfrm->attributes()->rot)/180000+180).'deg);';
+					}
+					//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
+					if($key != 'graphicFrame' && $spPr->xfrm->count() > 0){
+						$size = $spPr->xfrm->ext->attributes();
+						$pos = $spPr->xfrm->off->attributes();
+					}elseif($key == 'graphicFrame' && $node->xfrm->children($namespaces['a'])->count() > 0){
+						$size = $node->xfrm->children($namespaces['a'])->ext->attributes();
+						$pos = $node->xfrm->children($namespaces['a'])->off->attributes();
+					}
+					else{
+						$size = array(0,0);
+						$pos = array(0,0);
+					}
+				}elseif(array_key_exists('xfrm', $node)){
+					$xfrm = $node->xfrm->children($namespaces['a']);
+					if(isset($xfrm->attributes()->rot)){
+						$transform ='-webkit-transform: rotate('.(((string)$xfrm->attributes()->rot)/180000+180).'deg);';
+					}
+					$size = $xfrm->ext->attributes();
+					$pos = $xfrm->off->attributes();
 				}
 
 				//Prüfen um was für ein Element es sich handelt
@@ -144,17 +180,27 @@ class WritersController extends Appcontroller{
 					case "sp":
 						//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
 						$background = ColorController::getBackground($node->spPr->children($namespaces['a']), WritersController::$colormap['theme1'], $xmlreal);
-						$css = $css.'.'.substr($slide,0,-4).'sp'.$slideNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'}';
+						$css = $css.'.'.substr($slide,0,-4).'sp'.$slideNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm; '.$background.'; '.$transform.'}';
 						//Div Erstellen und Text aus Slide einlesen und an HTML übergeben
 						$text = '';
-						$text = $text.'<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$slideNr++.'">';
+
 
 						foreach ($node->txBody->children($namespaces['a']) as $key1=>$node1){
 							//Textknotenfiltern und Texteditor aufrufen
 							if($key1 == 'p'){
-								$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
+								if($text == ''){
+									if(substr($text.TextController::text($node1, $namespaces, WritersController::$colormap),4) == '<br>'){
+										$text = substr($text.TextController::text($node1, $namespaces, WritersController::$colormap),4);
+									}else{
+										$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
+									}
+								}else{
+									$text = $text.TextController::text($node1, $namespaces, WritersController::$colormap);
+								}
 							}
 						}
+						$text = '<div class="'.$frag.' '.substr($slide,0,-4).'sp'.$slideNr++.'">'.$text;
+
 						if($frag == ''){
 							$inputsildes = $inputsildes.$text.'</div>';
 						}else{
@@ -201,8 +247,17 @@ class WritersController extends Appcontroller{
 							if($frag == ''){
 								$inputsildes = $inputsildes.$graf.'</div>';
 							}else{
-								$k = array_search($vID, $id);
-								$narray = array($k =>array($vID=>($graf.'</div>')));
+								$k = array_search($nodeID, $id);
+								$narray = array($k =>array($nodeID=>($graf.'</div>')));
+								$id = array_replace($id, $narray);
+							}
+						}else{
+							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
+							if($frag == ''){
+								$inputsildes = $inputsildes.$graf.'</div>';
+							}else{
+								$k = array_search($nodeID, $id);
+								$narray = array($k =>array($nodeID=>($graf.'</div>')));
 								$id = array_replace($id, $narray);
 							}
 						}
