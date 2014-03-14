@@ -1,15 +1,16 @@
 <?php
 
 App::uses('File', 'Utility');
-App::import('Controller','Messages');
-App::import('Controller','Text');
-App::import('Controller','Media');
-App::import('Controller','Diagramms');
+App::import('Controller','Charts');
 App::import('Controller','Color');
+App::import('Controller','Diagramms');
+App::import('Controller','Media');
+App::import('Controller','Messages');
+App::import('Controller','Nodes');
 App::import('Controller','PPTXForms');
-App::import('Controller', 'Nodes');
+App::import('Controller','Text');
 
-class WritersController extends Appcontroller{
+class WritersController extends AppController{
 
 	private static $colormap;
 
@@ -243,7 +244,7 @@ class WritersController extends Appcontroller{
 						if(array_key_exists ('c',$namespaces)){
 							//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
 							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
-							$graf = $graf.DiagrammsController::getDiagramms($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
+							$graf = $graf.ChartsController::getCharts($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
 							if($frag == ''){
 								$inputsildes = $inputsildes.$graf.'</div>';
 							}else{
@@ -251,13 +252,15 @@ class WritersController extends Appcontroller{
 								$narray = array($k =>array($nodeID=>($graf.'</div>')));
 								$id = array_replace($id, $narray);
 							}
-						}else{
-							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
+						}elseif(array_key_exists ('dgm',$namespaces)){
+							$dia = DiagrammsController::getDiagramms();
+							$graf = $graf.'<div class="'.$frag.' '.$dia[0].'gFrame'.$objekctNr++.'">';
+							$css = $css.$graf[1];
 							if($frag == ''){
-								$inputsildes = $inputsildes.$graf.'</div>';
+								$inputsildes = $graf.'</div>';
 							}else{
 								$k = array_search($nodeID, $id);
-								$narray = array($k =>array($nodeID=>($graf.'</div>')));
+								$narray = array($k =>array($nodeID=>($dia[0].'</div>')));
 								$id = array_replace($id, $narray);
 							}
 						}
