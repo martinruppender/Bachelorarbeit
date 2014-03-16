@@ -3,7 +3,7 @@
 App::uses('File', 'Utility');
 App::import('Controller','Charts');
 App::import('Controller','Color');
-App::import('Controller','Diagramms');
+App::import('Controller','Diagramm');
 App::import('Controller','Media');
 App::import('Controller','Messages');
 App::import('Controller','Nodes');
@@ -241,6 +241,7 @@ class WritersController extends AppController{
 					case "graphicFrame":
 						$css = $css.'.'.substr($slide,0,-4).'gFrame'.$objekctNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
 						$graf='';
+						
 						if(array_key_exists ('c',$namespaces)){
 							//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
 							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
@@ -253,14 +254,16 @@ class WritersController extends AppController{
 								$id = array_replace($id, $narray);
 							}
 						}elseif(array_key_exists ('dgm',$namespaces)){
-							$dia = DiagrammsController::getDiagramms();
-							$graf = $graf.'<div class="'.$frag.' '.$dia[0].'gFrame'.$objekctNr++.'">';
+							$dia = DiagrammController::getDiagramms();
+							$graf = $graf.'<div class="'.$dia[0].'gFrame'.$objekctNr++.'"></div>';
 							$css = $css.$graf[1];
 							if($frag == ''){
 								$inputsildes = $graf.'</div>';
+								debug($inputsildes);
 							}else{
 								$k = array_search($nodeID, $id);
-								$narray = array($k =>array($nodeID=>($dia[0].'</div>')));
+								$narray = array($k =>array($nodeID=>('<div class="'.$frag.' '.$dia[0].'gFrame'.$objekctNr++.'"></div>')));
+								debug($narray);
 								$id = array_replace($id, $narray);
 							}
 						}

@@ -1,6 +1,6 @@
 <?php
 
-class DiagrammsController extends AppController{
+class DiagrammController extends AppController{
 
 	public static function getDiagramms(){
 
