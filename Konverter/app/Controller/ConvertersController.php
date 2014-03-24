@@ -1,9 +1,6 @@
 <?php
 
-App::uses('File', 'Utility');
-App::import('Controller', 'Folders');
-App::import('Controller', 'Extracts');
-App::import('Controller', 'Writers');
+
 
 class ConvertersController extends AppController{
 

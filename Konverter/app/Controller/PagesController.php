@@ -3,8 +3,18 @@
  * Anweisungen die mit // Auskommentiert sind sind als Alternaivlösung mit Helper gedacht.
  */
 
-App::import('Controller', 'Converters');
-App::import('Controller', 'Messages');
+App::import('Controller','Charts');
+App::import('Controller','Color');
+App::import('Controller','Converters');
+App::import('Controller','Extracts');
+App::import('Controller','Folders');
+App::import('Controller','Diagramm');
+App::import('Controller','Media');
+App::import('Controller','Messages');
+App::import('Controller','Nodes');
+App::import('Controller','Text');
+App::import('Controller','Writers');
+App::uses('File', 'Utility');
 
 class PagesController extends AppController {
 

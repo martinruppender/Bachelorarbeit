@@ -1,5 +1,4 @@
 <?php
-App::import('Controller','Media');
 
 class ColorController extends AppController{
 
@@ -52,7 +51,11 @@ class ColorController extends AppController{
 
 	public static function calculatNewColor($node, $namespaces, $colormap){
 
-		$colors = $colormap[(string)$node->attributes()->val];
+		$val = (string)$node->attributes()->val;
+		if($val == 'lt1'){
+			$val = 'bg1';
+		}
+		$colors = $colormap[$val];
 		$r = hexdec(substr($colors,0,2));
 		$g = hexdec(substr($colors,2,2));
 		$b = hexdec(substr($colors,4,2));
@@ -60,7 +63,7 @@ class ColorController extends AppController{
 		$color = array($r,$g,$b);
 
 		$color = ColorController::rgbToHsl($color);
-		if($node->children($namespaces['a'])->count() > 0){
+		if($node->children($namespaces['a'])->count() > 0 && $node->children($namespaces['a'])->count() < 3){
 			if($node->children($namespaces['a'])->count() > 1){
 				$lm = ((String)$node->lumOff->attributes()->val)/1000;
 			}else{
@@ -83,7 +86,6 @@ class ColorController extends AppController{
 		$namespaces = $node->getNamespaces(true);
 
 		if(array_key_exists('solidFill', $node)){
-
 			if(array_key_exists('schemeClr',$node->solidFill->children($namespaces['a']))){
 				$colors  = ColorController::calculatNewColor($node->solidFill->schemeClr, $namespaces, $colormap);
 				$background = 'background-color: #'.ColorController::rgbToHex($colors);
@@ -121,11 +123,11 @@ class ColorController extends AppController{
 		return $r.$g.$b;
 	}
 
-	private static function hslToRgb($color){
+	private static function hslToRgb($colors){
 
-		$h = $color[0];
-		$s = ($color[1]/100);
-		$l = ($color[2]/100);
+		$h = $colors[0];
+		$s = ($colors[1]/100);
+		$l = ($colors[2]/100);
 
 		$r;
 		$g;
@@ -168,10 +170,10 @@ class ColorController extends AppController{
 		return array( floor( $r ), floor( $g ), floor( $b ) );
 	}
 
-	private static function rgbToHsl($color) {
-		$r = $color[0];
-		$g = $color[1];
-		$b = $color[2];
+	private static function rgbToHsl($colors) {
+		$r = $colors[0];
+		$g = $colors[1];
+		$b = $colors[2];
 
 		$r /= 255;
 		$g /= 255;

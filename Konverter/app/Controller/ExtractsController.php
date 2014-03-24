@@ -10,7 +10,6 @@ class ExtractsController extends AppController{
 		$zip->close();
 	}
 	
-	
 	public function download($folder){
 	
 		$zip = new ZipArchive;

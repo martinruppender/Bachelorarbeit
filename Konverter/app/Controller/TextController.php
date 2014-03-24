@@ -2,13 +2,11 @@
 
 class TextController extends AppController{
 
-	public static function text($node, $namespace, $colormap){
+	public static function text($node, $namespaces, $colormap){
 
 		$openDIV = false;
 		$text ='';
 
-		
-		
 		if(array_key_exists('t', $node->r)){
 			//Durchlaufe alle Elemente in Textknoten
 			foreach ($node as $key=>$node){
@@ -34,14 +32,14 @@ class TextController extends AppController{
 					$endTags ='';
 
 
-					foreach ($node->children($namespace['a'])as $key1=>$node1){
+					foreach ($node->children($namespaces['a'])as $key1=>$node1){
 
 						//Prüfen auf Formatierungselement
 						if($key1 =='rPr'){
 
 							//Prüfen auf Fontelement und ensprechende Änderungen sowie übergabe in HTML
-							if($node1->children($namespace['a'])){
-								$font = $node1->children($namespace['a']);
+							if($node1->children($namespaces['a'])){
+								$font = $node1->children($namespaces['a']);
 
 								$startTags = '<font';
 
@@ -54,12 +52,12 @@ class TextController extends AppController{
 								//Prüfen ob Farbe geändert wurde
 								if(array_key_exists('solidFill', $font)){
 
-									if(array_key_exists('srgbClr',$font->solidFill->children($namespace['a']))){
+									if(array_key_exists('srgbClr',$font->solidFill->children($namespaces['a']))){
 										$color = $font->solidFill->srgbClr[0]->attributes();
 										$startTags = $startTags.' color="#'.(string)$color['val'].'">';
 									}
-									if(array_key_exists('schemeClr',$font->solidFill->children($namespace['a']))){
-										$colors  = ColorController::calculatNewColor($font->solidFill->schemeClr, $namespace, $colormap['theme1']);
+									if(array_key_exists('schemeClr',$font->solidFill->children($namespaces['a']))){
+										$colors  = ColorController::calculatNewColor($font->solidFill->schemeClr, $namespaces, $colormap['theme1']);
 										$color = dechex($colors[0]).dechex($colors[1]).dechex($colors[2]);
 										$startTags = $startTags.' color="#'.$color.'">';
 									}

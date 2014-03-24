@@ -1,15 +1,5 @@
 <?php
 
-App::uses('File', 'Utility');
-App::import('Controller','Charts');
-App::import('Controller','Color');
-App::import('Controller','Diagramm');
-App::import('Controller','Media');
-App::import('Controller','Messages');
-App::import('Controller','Nodes');
-App::import('Controller','PPTXForms');
-App::import('Controller','Text');
-
 class WritersController extends AppController{
 
 	private static $colormap;
@@ -64,9 +54,7 @@ class WritersController extends AppController{
 		$fileCSS = file_get_contents($outputfolder.DS.'css'.DS.'konverter.css', "r+");
 
 		$fileHTML = ereg_replace("inputtitel",$fileName, $fileHTML);
-
 		$inputsildes = '';
-		;
 
 		//Durchgehen der einzelenen Slides und Hinhalt in HTML/CSS fähigen String konvertieren
 		foreach ($slides as $slide){
@@ -78,6 +66,8 @@ class WritersController extends AppController{
 				}
 			}
 		}
+
+		$inputsildes = ereg_replace("<","\n<", $inputsildes);
 
 		//Schreiben der HTML/CSS fähigen Stings in die zu editirenden Dateien und speichern.
 		$fileHTML = ereg_replace("inputsildes",$inputsildes, $fileHTML);
@@ -148,7 +138,7 @@ class WritersController extends AppController{
 					$spPr = $node->spPr->children($namespaces['a']);
 
 					if(isset($spPr->xfrm) && isset($spPr->xfrm->attributes()->rot)){
-						$transform ='-webkit-transform: rotate('.(((string)$spPr->xfrm->attributes()->rot)/180000+180).'deg);';
+						$transform ='-webkit-transform: rotate('.(((string)$spPr->xfrm->attributes()->rot)/60030).'deg);';
 					}
 					//Position und Größe innerhalb der Slide bestimmen und an CSS übergeben
 					if($key != 'graphicFrame' && $spPr->xfrm->count() > 0){
@@ -240,34 +230,28 @@ class WritersController extends AppController{
 						//Diagramm
 					case "graphicFrame":
 						$css = $css.'.'.substr($slide,0,-4).'gFrame'.$objekctNr.'{position:absolute; top:'.round($pos[1]/360000,2).'cm; left:'.round($pos[0]/360000,2).'cm; height:'.round($size[1]/360000,2).'cm; width:'.round($size[0]/360000,2).'cm}';
-						$graf='';
-						
+						$graf='<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
+
 						if(array_key_exists ('c',$namespaces)){
 							//Feld erzeugen Diagramm in Converter übergeben in in HTML übergeben
-							$graf = $graf.'<div class="'.$frag.' '.substr($slide,0,-4).'gFrame'.$objekctNr++.'">';
-							$graf = $graf.ChartsController::getCharts($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap);
-							if($frag == ''){
-								$inputsildes = $inputsildes.$graf.'</div>';
-							}else{
-								$k = array_search($nodeID, $id);
-								$narray = array($k =>array($nodeID=>($graf.'</div>')));
-								$id = array_replace($id, $narray);
-							}
+							$graf = $graf.ChartsController::getCharts($xmlreal, $path, $node->children($namespaces['a'])->graphic->graphicData->children($namespaces['c']), $size, WritersController::$colormap).'</div>';
+								
 						}elseif(array_key_exists ('dgm',$namespaces)){
-							$dia = DiagrammController::getDiagramms();
-							$graf = $graf.'<div class="'.$dia[0].'gFrame'.$objekctNr++.'"></div>';
-							$css = $css.$graf[1];
-							if($frag == ''){
-								$inputsildes = $graf.'</div>';
-								debug($inputsildes);
-							}else{
-								$k = array_search($nodeID, $id);
-								$narray = array($k =>array($nodeID=>('<div class="'.$frag.' '.$dia[0].'gFrame'.$objekctNr++.'"></div>')));
-								debug($narray);
-								$id = array_replace($id, $narray);
-							}
+
+							$dia = DiagrammController::getDiagramms($path, $slide);
+							$css = $css.$dia[1];
+							$graf = $graf.$dia[0].'</div>';
 						}
-						break;
+						if($frag == ''){
+							$inputsildes = $inputsildes.$graf;
+							break;
+						}else{
+							$k = array_search($nodeID, $id);
+							$narray = array($k =>array($nodeID=>($graf)));
+							$id = array_replace($id, $narray);
+							break;
+
+						}
 				}
 			}
 		}

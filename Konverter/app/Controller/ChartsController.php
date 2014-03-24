@@ -1,7 +1,5 @@
 <?php
 
-App::import('Controller','Color');
-
 class DiagrammsController extends AppController{
 
 	private static $colormap;

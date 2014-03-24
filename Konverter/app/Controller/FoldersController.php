@@ -1,7 +1,5 @@
 <?php
 
-App::uses('File', 'Utility');
-
 class FoldersController extends AppController{
 
 	public static function folderMkdir($stct){
