@@ -42,14 +42,46 @@ class DiagrammController extends AppController{
 
 				$gr = $value->spPr->children($namespaces['a'])->xfrm->ext->attributes();
 				$pos =  $value->spPr->children($namespaces['a'])->xfrm->off->attributes();
-				
 				$colormap = ColorController::getColor(substr($path,0,-6));
 				$background = '';
+				$border = '';
 				if(!is_null($value->spPr->children($namespaces['a'])->prstGeom->attributes)){
 
 					switch ((string)$value->spPr->children($namespaces['a'])->prstGeom->attributes()->prst) {
 						case 'rect':
+							$background = ColorController::getBackground($value->spPr->children($namespaces['a']), $colormap['theme1'], '');
+							if(!isset($value->spPr->children($namespaces['a'])->ln->noFill)){
+								$border = 'border: 1px solid '.subStr(ColorController::getBackground($value->spPr->children($namespaces['a'])->ln, $colormap['theme1'], ''),-7).';';
+							}
+							$text = '';
+							foreach ($value->txBody->children($namespaces['a']) as $key1=>$node1){
+								//Textknotenfiltern und Texteditor aufrufen
+								if($key1 == 'p'){
+									if($text == ''){
+										if(substr($text.TextController::text($node1, $namespaces, $colormap),4) == '<br>'){
+											$text = substr($text.TextController::text($node1, $namespaces, $colormap),4);
+										}else{
+											$text = $text.TextController::text($node1, $namespaces, $colormap);
+										}
+									}else{
+										$text = $text.TextController::text($node1, $namespaces, $colormap);
+									}
+								}
+							}
+								
+							$css = $css.'.'.subStr($slide,0,-4).'rectangle'.$i.' {
+							position: absolute;
+							text-align: center;
+							margin:'.round($pos[1]/360000,2).'cm '.round($pos[0]/360000,2).'cm;
+							width: '.round($gr[0]/360000,2).'cm;
+							height: '.round($gr[1]/360000,2).'cm;
+							'.$border.'
+							'.$background.'
+					}';
+							$html = $html.'<div class="'.subStr($slide,0,-4).'rectangle'.$i.'">'.$text.'</div>';
+							$i++;
 							break;
+
 						case 'triangle':
 							$background = '#'.$colormap['theme1'][(string)$value->spPr->children($namespaces['a'])->gradFill->gsLst->gs->schemeClr->attributes()->val];
 							$css = $css.'.'.subStr($slide,0,-4).'triangle'.$i.'  {
@@ -61,41 +93,80 @@ class DiagrammController extends AppController{
 							border-right: '.round($gr[0]/720000,2).'cm solid transparent;
 							border-bottom: '.round($gr[0]/360000,2).'cm solid '.$background.'
 					}';
-
 							$html = $html.'<div class="'.subStr($slide,0,-4).'triangle'.$i.'"></div>';
 							$i++;
-
-
 							break;
+
 						case'ellipse':
 							$background = ColorController::getBackground($value->spPr->children($namespaces['a']), $colormap['theme1'], '');
-							$text = substr(TextController::text($value->txBody->children($namespaces['a'])->p->children($namespaces['a']), $namespaces, $colormap),4);
+							if(!isset($value->spPr->children($namespaces['a'])->ln->noFill)){
+								$border = 'border: 1px solid '.subStr(ColorController::getBackground($value->spPr->children($namespaces['a'])->ln, $colormap['theme1'], ''),-7).';';
+							}
+							$text = '';
+							foreach ($value->txBody->children($namespaces['a']) as $key1=>$node1){
+								//Textknotenfiltern und Texteditor aufrufen
+								if($key1 == 'p'){
+									if($text == ''){
+										if(substr($text.TextController::text($node1, $namespaces, $colormap),4) == '<br>'){
+											$text = substr($text.TextController::text($node1, $namespaces, $colormap),4);
+										}else{
+											$text = $text.TextController::text($node1, $namespaces, $colormap);
+										}
+									}else{
+										$text = $text.TextController::text($node1, $namespaces, $colormap);
+									}
+								}
+							}
 							$css = $css.'.'.subStr($slide,0,-4).'circle'.$i.' {
-							
 							position: absolute;
 							text-align: center;
 							margin:'.round($pos[1]/360000,2).'cm '.round($pos[0]/360000,2).'cm;
 							width: '.round($gr[0]/360000,2).'cm;
 							height: '.round($gr[1]/360000,2).'cm;
+							'.$border.'
 							border-radius: '.round($gr[1]/440000,2).'cm;'.
 							$background.'
 					}';
 							$html = $html.'<div class="'.subStr($slide,0,-4).'circle'.$i.'">'.$text.'</div>';
 							$i++;
+
 							break;
+
 						case'roundRect':
-							$background = ColorController::getBackground($value->spPr->children($namespaces['a']), $colormap['theme1'], '');
-							$text = substr(TextController::text($value->txBody->children($namespaces['a'])->p->children($namespaces['a']), $namespaces, $colormap),4);
+							if(!isset($value->spPr->children($namespaces['a'])->solidFill)){
+								//debug($value->spPr->children($namespaces['a'])->gradFill->gsLst->gs->schemeClr);
+								$background = 'background-color: #'.$colormap['theme1'][(string)$value->spPr->children($namespaces['a'])->gradFill->gsLst->gs->schemeClr->attributes()->val];
+							}else{
+								$background = ColorController::getBackground($value->spPr->children($namespaces['a']), $colormap['theme1'], '');
+							}
+							if(!isset($value->spPr->children($namespaces['a'])->ln->noFill)){
+								$border = 'border: 1px solid '.subStr(ColorController::getBackground($value->spPr->children($namespaces['a'])->ln, $colormap['theme1'], ''),-7).';';
+							}
+							$text = '';
+							foreach ($value->txBody->children($namespaces['a']) as $key1=>$node1){
+								//Textknotenfiltern und Texteditor aufrufen
+								if($key1 == 'p'){
+									if($text == ''){
+										if(substr($text.TextController::text($node1, $namespaces, $colormap),4) == '<br>'){
+											$text = substr($text.TextController::text($node1, $namespaces, $colormap),4);
+										}else{
+											$text = $text.TextController::text($node1, $namespaces, $colormap);
+										}
+									}else{
+										$text = $text.TextController::text($node1, $namespaces, $colormap);
+									}
+								}
+							}
 							$css = $css.'.'.subStr($slide,0,-4).'circle'.$i.' {
-								
 							position: absolute;
 							text-align: center;
 							margin:'.round($pos[1]/360000,2).'cm '.round($pos[0]/360000,2).'cm;
 							width: '.round($gr[0]/360000,2).'cm;
 							height: '.round($gr[1]/360000,2).'cm;
-							border-radius: 1cm;'.
+							'.$border.'
+							border-radius: '.(round($gr[1]/360000,2)/3).'cm;'.
 							$background.'
-							}';
+					}';
 							$html = $html.'<div class="'.subStr($slide,0,-4).'circle'.$i.'">'.$text.'</div>';
 							$i++;
 							break;
