@@ -124,7 +124,7 @@ class DiagrammController extends AppController{
 							width: '.round($gr[0]/360000,2).'cm;
 							height: '.round($gr[1]/360000,2).'cm;
 							'.$border.'
-							border-radius: '.round($gr[1]/440000,2).'cm;'.
+							border-radius: '.round($gr[1]/360000,2).'cm;'.
 							$background.'
 					}';
 							$html = $html.'<div class="'.subStr($slide,0,-4).'circle'.$i.'">'.$text.'</div>';
@@ -157,7 +157,7 @@ class DiagrammController extends AppController{
 									}
 								}
 							}
-							$css = $css.'.'.subStr($slide,0,-4).'circle'.$i.' {
+							$css = $css.'.'.subStr($slide,0,-4).'roundRect'.$i.' {
 							position: absolute;
 							text-align: center;
 							margin:'.round($pos[1]/360000,2).'cm '.round($pos[0]/360000,2).'cm;
@@ -167,7 +167,7 @@ class DiagrammController extends AppController{
 							border-radius: '.(round($gr[1]/360000,2)/3).'cm;'.
 							$background.'
 					}';
-							$html = $html.'<div class="'.subStr($slide,0,-4).'circle'.$i.'">'.$text.'</div>';
+							$html = $html.'<div class="'.subStr($slide,0,-4).'roundRect'.$i.'">'.$text.'</div>';
 							$i++;
 							break;
 					}

@@ -36,8 +36,8 @@ class WritersController extends AppController{
 
 		if(isset($slidemaster->bgPr)){
 
-			$slideMasterreal = new SimpleXMLElement(file_get_contents($tempFolder.DS.'slideMasters'.DS.'_rels'.DS.'slideMaster1.xml.rels'));
-			$background = ColorController::getBackground($slidemaster->bgPr->children($namespaces['a']), WritersController::$colormap['theme1'], $slideMasterreal);
+			$slideMasterRel = new SimpleXMLElement(file_get_contents($tempFolder.DS.'slideMasters'.DS.'_rels'.DS.'slideMaster1.xml.rels'));
+			$background = ColorController::getBackground($slidemaster->bgPr->children($namespaces['a']), WritersController::$colormap['theme1'], $slideMasterRel);
 
 		}
 
@@ -163,11 +163,7 @@ class WritersController extends AppController{
 
 				//Prüfen um was für ein Element es sich handelt
 				switch ($key) {
-					case "cxnSp":
-						PPTXFormsController::getForm($node);
-						break;
-
-						//Textelement
+					//Textelement
 					case "sp":
 						//Füllfarbe des Feldes bestimmen und mit Position an CSS übergeben
 						$background = ColorController::getBackground($node->spPr->children($namespaces['a']), WritersController::$colormap['theme1'], $xmlreal);

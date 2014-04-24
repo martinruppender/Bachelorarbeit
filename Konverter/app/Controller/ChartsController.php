@@ -1,12 +1,12 @@
 <?php
 
-class DiagrammsController extends AppController{
+class ChartsController extends AppController{
 
 	private static $colormap;
 
 	public static function getCharts($xmlreal, $path, $node, $size, $colormap){
 
-		DiagrammsController::$colormap = $colormap;
+		ChartsController::$colormap = $colormap;
 		$flag;
 
 		$id =  (string)$node->attributes('r', true);
@@ -22,12 +22,12 @@ class DiagrammsController extends AppController{
 					$chart = $chart->children($namespace['c'])->chart->plotArea;
 					if(isset($chart->barChart)){
 
-						$diagrammdatas = DiagrammsController::barChart($chart->barChart, $colormap);
+						$diagrammdatas = ChartsController::barChart($chart->barChart, $colormap);
 					}
 
 					if(isset($chart->pieChart)){
 
-						$diagrammdatas = DiagrammsController::pieChart($chart->pieChart, $colormap);
+						$diagrammdatas = ChartsController::pieChart($chart->pieChart, $colormap);
 					}
 				}
 			}
@@ -36,7 +36,7 @@ class DiagrammsController extends AppController{
 			return '<canvas id="'.$name.'" width="'.round($size[0]/9525).'" height="'.round($size[1]/9525).'"></canvas>
 			<script>
 			'.$diagrammdatas[1].'
-			var ctx = document.getElementById("'.$name.'").getContext("2d");
+			var ctx = document.getElementById("'.$name.'").getContext("3d");
 			var myNewChart = new Chart(ctx).'.$diagrammdatas[0].';
 			</script>';
 		}else{
